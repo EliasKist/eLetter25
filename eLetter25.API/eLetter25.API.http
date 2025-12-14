@@ -1,0 +1,72 @@
+@eLetter25_API_HostAddress = http://localhost:5296
+
+###
+
+POST {{eLetter25_API_HostAddress}}/letters
+Content-Type: application/json
+Accept: application/json
+
+{
+  "subject": "Mein erster Beispielbrief",
+  "sentDate": "2025-01-01T10:00:00Z",
+  "sender": {
+    "name": "Max Mustermann",
+    "email": "max.mustermann@example.com",
+    "phone": "+49 151 12345678",
+    "address": {
+      "street": "Musterstraße 1",
+      "postalCode": "12345",
+      "city": "Musterstadt",
+      "country": "DE"
+    }
+  },
+  "recipient": {
+    "name": "Erika Musterfrau",
+    "email": "erika.musterfrau@example.com",
+    "phone": "+49 171 87654321",
+    "address": {
+      "street": "Beispielweg 5",
+      "postalCode": "54321",
+      "city": "Beispielstadt",
+      "country": "DE"
+    }
+  },
+  "tags": [
+    "Beispiel",
+    "Test"
+  ]
+}
+
+
+
+
+###
+
+POST {{eLetter25_API_HostAddress}}/letters
+Content-Type: application/json
+Accept: application/json
+
+{
+  "subject": "Brief ohne Kontakte",
+  "sentDate": "2025-02-02T09:30:00Z",
+  "sender": {
+    "name": "Hans Beispiel",
+    "address": {
+      "street": "OhneKontaktweg 7",
+      "postalCode": "11111",
+      "city": "Kontaktlosdorf",
+      "country": "DE"
+    }
+  },
+  "recipient": {
+    "name": "Lisa Empfänger",
+    "address": {
+      "street": "Empfangsallee 9",
+      "postalCode": "22222",
+      "city": "Empfangshausen",
+      "country": "DE"
+    }
+  }
+}
+
+

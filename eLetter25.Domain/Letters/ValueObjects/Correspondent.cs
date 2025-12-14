@@ -1,16 +1,31 @@
-﻿using eLetter25.Domain.ValueObjects;
+﻿using eLetter25.Domain.Shared.ValueObjects;
 
 namespace eLetter25.Domain.Letters.ValueObjects;
 
 /// <summary>
 /// Represents a correspondent involved in the letter exchange.
 /// </summary>
-/// <param name="Name"></param>
-/// <param name="Address"></param>
-/// <param name="Email"></param>
-/// <param name="Phone"></param>
-public sealed record Correspondent(
-    string Name,
-    Address Address,
-    string? Email,
-    string? Phone);
+public sealed record Correspondent
+{
+    public string Name { get; set; }
+    public Address Address { get; set; }
+    public Email? Email { get; set; }
+    public PhoneNumber? Phone { get; set; }
+
+    public Correspondent(
+        string name,
+        Address address,
+        Email? email = null,
+        PhoneNumber? phone = null)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Name cannot be null or whitespace.", nameof(name));
+        }
+
+        Name = name;
+        Address = address;
+        Email = email;
+        Phone = phone;
+    }
+}

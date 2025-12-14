@@ -1,6 +1,6 @@
 ﻿using eLetter25.Domain.Common;
-using eLetter25.Domain.ValueObjects;
 using eLetter25.Domain.Letters.Exceptions;
+using eLetter25.Domain.Letters.ValueObjects;
 
 namespace eLetter25.Domain.Letters;
 
@@ -10,14 +10,14 @@ namespace eLetter25.Domain.Letters;
 public class LetterDocument(DocumentFormat documentFormat) : DomainEntity
 {
     public DocumentFormat DocumentFormat { get; private set; } = documentFormat;
-    private ContentHash? ContentHash { get; set; }
+    public ContentHash? ContentHash { get; private set; }
     public long? SizeInBytes { get; private set; }
 
     public void SetStoredMetadata(ContentHash contentHash, long sizeInBytes)
     {
         if (ContentHash is not null && ContentHash != contentHash)
         {
-            throw new ContentHashAlreadySetException(Id, ContentHash, contentHash);
+            throw new ContentHashAlreadySetException(Id, ContentHash.Value, contentHash);
         }
 
         ArgumentOutOfRangeException.ThrowIfNegative(sizeInBytes);

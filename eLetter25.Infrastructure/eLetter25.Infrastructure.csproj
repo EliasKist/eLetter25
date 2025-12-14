@@ -4,6 +4,27 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <UserSecretsId>c619c947-3b8f-4eb5-a4a7-08f0b130056b</UserSecretsId>
     </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.1" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="10.0.1" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.1">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.1" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.1" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.1">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\eLetter25.Application\eLetter25.Application.csproj" />
+      <ProjectReference Include="..\eLetter25.Domain\eLetter25.Domain.csproj" />
+    </ItemGroup>
 
 </Project>

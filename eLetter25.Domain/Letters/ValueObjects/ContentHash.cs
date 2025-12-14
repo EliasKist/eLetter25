@@ -1,6 +1,6 @@
-﻿namespace eLetter25.Domain.ValueObjects;
+﻿namespace eLetter25.Domain.Letters.ValueObjects;
 
-public sealed record ContentHash
+public readonly record struct ContentHash
 {
     public string Value { get; }
 

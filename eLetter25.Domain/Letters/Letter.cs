@@ -13,17 +13,102 @@ public class Letter : DomainEntity
     public IReadOnlyCollection<Tag> Tags { get; private set; } = [];
 
     public DateTimeOffset SentDate { get; private set; }
-    public DateTimeOffset CreatedDate { get; private set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedDate { get; private set; }
 
-    public Correspondent Sender { get; private set; }
-    public Correspondent Recipient { get; private set; }
+    public Correspondent? Sender { get; private set; }
+    public Correspondent? Recipient { get; private set; }
 
     public Guid? SenderReferenceId { get; private set; }
     public Guid? RecipientReferenceId { get; private set; }
 
-    internal Letter(Correspondent sender, Correspondent recipient)
+    private Letter() // For EF Core
     {
-        Sender = sender;
-        Recipient = recipient;
+    }
+
+    public static Letter Create(Correspondent sender, Correspondent recipient, DateTimeOffset sentDate)
+    {
+        ArgumentNullException.ThrowIfNull(sender);
+        ArgumentNullException.ThrowIfNull(recipient);
+
+        if (sentDate == default)
+        {
+            throw new ArgumentException("Sent date must be a valid date.", nameof(sentDate));
+        }
+
+        var letter = new Letter
+        {
+            Sender = sender,
+            Recipient = recipient,
+            SentDate = sentDate,
+            CreatedDate = DateTimeOffset.UtcNow,
+        };
+        return letter;
+    }
+
+    public Letter SetSubject(string subject)
+    {
+        if (string.IsNullOrWhiteSpace(subject))
+        {
+            throw new ArgumentException("Subject cannot be null or whitespace.", nameof(subject));
+        }
+
+        Subject = subject.Trim();
+        return this;
+    }
+
+    public Letter SetSenderReferenceId(Guid senderReferenceId)
+    {
+        SenderReferenceId = senderReferenceId;
+        return this;
+    }
+
+    public Letter SetRecipientReferenceId(Guid recipientReferenceId)
+    {
+        RecipientReferenceId = recipientReferenceId;
+        return this;
+    }
+
+
+    public Letter AddTag(Tag tag)
+    {
+        var tags = Tags.ToList();
+        tags.Add(tag);
+        Tags = tags;
+        return this;
+    }
+
+    public Letter AddTags(IEnumerable<Tag> tags)
+    {
+        var currentTags = Tags.ToList();
+        currentTags.AddRange(tags);
+        Tags = currentTags;
+        return this;
+    }
+
+
+    public void ClearTags()
+    {
+        Tags = [];
+    }
+
+    public void RemoveTag(Tag tag)
+    {
+        var tags = Tags.ToList();
+        tags.Remove(tag);
+        Tags = tags;
+    }
+
+    public void RemoveTag(string tagName)
+    {
+        var tags = Tags.ToList();
+        var tagToRemove = tags.FirstOrDefault(t => t.Value == tagName);
+
+        tags.Remove(tagToRemove);
+        Tags = tags;
+    }
+
+    public bool HasTag(string tagName)
+    {
+        return Tags.Any(t => t.Value == tagName);
     }
 }

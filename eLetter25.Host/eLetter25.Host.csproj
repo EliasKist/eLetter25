@@ -10,6 +10,11 @@
 
     <ItemGroup>
       <ProjectReference Include="..\eLetter25.API\eLetter25.API.csproj" />
+      <ProjectReference Include="..\eLetter25.Infrastructure\eLetter25.Infrastructure.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Aspire.Hosting.SqlServer" Version="13.0.2" />
     </ItemGroup>
 
 </Project>
