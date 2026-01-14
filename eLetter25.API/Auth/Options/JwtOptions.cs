@@ -1,5 +1,8 @@
-﻿namespace etter25.API.Features;
+﻿namespace eLetter25.API.Auth.Options;
 
+/// <summary>
+/// Configuration options for JWT authentication
+/// </summary>
 public sealed class JwtOptions
 {
     public const string SectionName = "Jwt";

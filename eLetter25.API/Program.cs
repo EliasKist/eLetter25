@@ -1,4 +1,5 @@
 using System.Text;
+using eLetter25.API.Auth.Options;
 using eLetter25.Application.Common.Ports;
 using eLetter25.Application.Letters.Ports;
 using eLetter25.Application.Letters.UseCases.CreateLetter;
@@ -6,7 +7,6 @@ using eLetter25.Infrastructure.Auth.Data;
 using eLetter25.Infrastructure.Persistence;
 using eLetter25.Infrastructure.Persistence.Letters;
 using eLetter25.Infrastructure.Persistence.Letters.Mappings;
-using etter25.API.Features;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -105,9 +105,6 @@ if (app.Environment.IsDevelopment())
 
 // Middleware and Endpoints
 
-RegisterUser.MapEndpoint(app);
-LoginUser.MapEndpoint(app);
-
 app.MapGet("/", () => "eLetter25.API is running...");
 
 app.UseHttpsRedirection();
@@ -115,4 +112,7 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapControllers();
+
 app.Run();
+

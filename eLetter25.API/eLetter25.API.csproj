@@ -4,7 +4,6 @@
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-        <RootNamespace>etter25.API</RootNamespace>
         <UserSecretsId>cd73cc74-597f-4717-845c-0efb7fbef5e1</UserSecretsId>
     </PropertyGroup>
 
