@@ -1,5 +1,28 @@
 @eLetter25_API_HostAddress = http://localhost:5296
 
+### Benutzerregistrierung
+
+POST {{eLetter25_API_HostAddress}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "test@example.com",
+  "password": "TestPassword123!",
+  "enableNotifications": true
+}
+
+### Login
+
+POST {{eLetter25_API_HostAddress}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "test@example.com",
+  "password": "TestPassword123!"
+}
+
 ###
 
 POST {{eLetter25_API_HostAddress}}/letters
