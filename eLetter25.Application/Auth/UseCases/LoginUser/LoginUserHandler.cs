@@ -1,4 +1,5 @@
 ﻿using eLetter25.Application.Auth.Ports;
+using eLetter25.Application.Common.Results;
 using MediatR;
 
 namespace eLetter25.Application.Auth.UseCases.LoginUser;
@@ -6,9 +7,9 @@ namespace eLetter25.Application.Auth.UseCases.LoginUser;
 public sealed class LoginUserHandler(
     IUserAuthenticationService userAuthenticationService,
     IJwtTokenGenerator jwtTokenGenerator)
-    : IRequestHandler<LoginUserCommand, LoginUserResult>
+    : IRequestHandler<LoginUserCommand, Result<LoginUserResult>>
 {
-    public async Task<LoginUserResult> Handle(LoginUserCommand command, CancellationToken cancellationToken)
+    public async Task<Result<LoginUserResult>> Handle(LoginUserCommand command, CancellationToken cancellationToken)
     {
         var request = command.Request;
         var credentials = await userAuthenticationService.ValidateCredentialsAsync(
@@ -17,11 +18,12 @@ public sealed class LoginUserHandler(
             cancellationToken);
         if (credentials is null)
         {
-            throw new UnauthorizedAccessException("Invalid credentials");
+            return Result<LoginUserResult>.Failure(Error.Unauthorized("Invalid email or password"));
         }
 
         var (userId, email, roles) = credentials.Value;
         var token = jwtTokenGenerator.GenerateToken(userId, email, roles);
-        return new LoginUserResult(token);
+        var result = new LoginUserResult(token);
+        return Result<LoginUserResult>.Success(result);
     }
 }

@@ -28,14 +28,20 @@ public sealed class RegisterController(IMediator mediator) : ControllerBase
         [FromBody] RegisterUserRequest request,
         CancellationToken cancellationToken = default)
     {
-        try
+        var result = await mediator.Send(new RegisterUserCommand(request), cancellationToken);
+
+        if (result.IsFailure)
         {
-            var result = await mediator.Send(new RegisterUserCommand(request), cancellationToken);
-            return Ok(new { userId = result.UserId, message = result.Message });
+            return BadRequest(new
+            {
+                errors = result.Errors.Select(e => new { code = e.Code, message = e.Message })
+            });
         }
-        catch (InvalidOperationException ex)
+
+        return Ok(new
         {
-            return BadRequest(new { error = ex.Message });
-        }
+            userId = result.Value!.UserId,
+            message = result.Value.Message
+        });
     }
 }

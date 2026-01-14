@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/Docs/">
+    <File Path="docs/API-Responses.md" />
     <File Path="docs/Architektur.md" />
     <File Path="docs/README.md" />
   </Folder>

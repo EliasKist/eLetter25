@@ -1,5 +1,6 @@
-using eLetter25.Application.Auth.Contracts;
+﻿using eLetter25.Application.Auth.Contracts;
 using eLetter25.Application.Auth.UseCases.LoginUser;
+using eLetter25.Application.Common.Results;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -28,14 +29,16 @@ public sealed class LoginController(IMediator mediator) : ControllerBase
         [FromBody] LoginUserRequest request,
         CancellationToken cancellationToken = default)
     {
-        try
+        var result = await mediator.Send(new LoginUserCommand(request), cancellationToken);
+        
+        if (result.IsFailure)
         {
-            var result = await mediator.Send(new LoginUserCommand(request), cancellationToken);
-            return Ok(result);
+            return Unauthorized(new
+            {
+                errors = result.Errors.Select(e => new { code = e.Code, message = e.Message })
+            });
         }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized();
-        }
+
+        return Ok(result.Value);
     }
 }
