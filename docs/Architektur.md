@@ -13,10 +13,10 @@
 **Kernmerkmale:**
 - .NET 10.0
 - Clean Architecture mit 4 Schichten (Domain, Application, Infrastructure, API)
-- Command-Handler-Pattern via MediatR
+- CQRS-Light + Domain Events via MediatR
 - Entity Framework Core 10 + SQL Server (Letters) + PostgreSQL (Identity)
-- JWT-basierte Authentifizierung (ASP.NET Core Identity)
-- .NET Aspire für lokale Entwicklung/Orchestrierung
+- JWT-basierte Authentifizierung mit ASP.NET Core Identity
+- .NET Aspire für lokale Entwicklung/Orchestrierung (SQL Server, PostgreSQL, Angular Client)
 
 ---
 
@@ -73,6 +73,13 @@ Keine strikte Read/Write-Trennung, aber:
 - Einheitliche Pipeline für Cross-Cutting Concerns (z.B. Validierung, Logging – aktuell nicht implementiert)
 - Erweiterbarkeit durch Behaviors
 
+### 2.4 Domain Events
+
+Domain Events werden in der Domain-Schicht ausgelöst und über die Infrastructure dispatcht:
+- Entities erben von `DomainEntity` und sammeln Events in `DomainEvents`.
+- `EfUnitOfWork` persistiert Änderungen und dispatcht Events danach.
+- Event-Handler in der Application-Schicht reagieren z.B. mit Audit-Logs.
+
 ---
 
 ## 3. Projekt-Struktur
@@ -85,9 +92,7 @@ Keine strikte Read/Write-Trennung, aber:
 | `eLetter25.Application`  | Class Lib  | `Domain`, `MediatR`                    | Use Cases, Ports, DTOs                     |
 | `eLetter25.Infrastructure` | Class Lib | `Application`, `Domain`, `EF Core`     | Persistenz, Mapper, Repository             |
 | `eLetter25.API`          | Web API    | `Infrastructure`                       | HTTP-Endpunkte, DI-Konfiguration, Auth     |
-| `eLetter25.Host`         | Aspire Host | `API`, `Infrastructure` (⚠️)          | Lokale Orchestrierung (Keycloak, SQL)      |
-
-**⚠️ Warnung:** Der Aspire Host sollte nur `API` referenzieren. Die Referenz auf `Infrastructure` erzeugt Build-Warnung `ASPIRE004`.
+| `eLetter25.Host`         | Aspire Host | `API`                                  | Lokale Orchestrierung (PostgreSQL, SQL Server, Angular) |
 
 ### 3.2 Ordnerstruktur (Beispiel)
 
@@ -247,6 +252,25 @@ Beispiele: `InvalidLetterStateException`, `DuplicateTagException` (noch nicht im
 
 ---
 
+#### 4.1.4 Domain Events
+
+```csharp
+public abstract record DomainEventBase : IDomainEvent;
+
+public abstract class DomainEntity
+{
+    private readonly List<IDomainEvent> _domainEvents = [];
+    public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
+
+    protected void Raise(IDomainEvent domainEvent) => _domainEvents.Add(domainEvent);
+    public void ClearDomainEvents() => _domainEvents.Clear();
+}
+```
+
+Beispiele: `LetterCreatedEvent`, `LetterTagAddedEvent`, `LetterSubjectChangedEvent`.
+
+---
+
 ### 4.2 Application (eLetter25.Application)
 
 **Verantwortung:**
@@ -336,6 +360,25 @@ public interface IUnitOfWork
 - Testbarkeit: Mocking ohne Infrastructure-Abhängigkeit
 
 ---
+
+#### 4.2.3 Domain Event Handler
+
+Die Application-Schicht enthält Event-Handler, die auf Domain Events reagieren (z.B. Audit):
+
+```csharp
+public sealed class LetterCreatedAuditHandler(IAuditWriter auditWriter)
+    : INotificationHandler<DomainEventNotification<LetterCreatedEvent>>
+{
+    public Task Handle(
+        DomainEventNotification<LetterCreatedEvent> notification,
+        CancellationToken cancellationToken)
+    {
+        return auditWriter.WriteAsync(
+            $"Letter created: {notification.DomainEvent.LetterId}",
+            cancellationToken);
+    }
+}
+```
 
 ### 4.3 Infrastructure (eLetter25.Infrastructure)
 
@@ -440,11 +483,23 @@ public sealed class LetterDbEntity
 #### 4.3.4 Unit of Work
 
 ```csharp
-public sealed class EfUnitOfWork(AppDbContext dbContext) : IUnitOfWork
+public sealed class EfUnitOfWork(
+    AppDbContext dbContext,
+    IDomainEventCollector domainEventCollector,
+    IDomainEventDispatcher domainEventDispatcher) : IUnitOfWork
 {
-    public Task CommitAsync(CancellationToken ct = default)
+    public async Task CommitAsync(CancellationToken ct = default)
     {
-        return dbContext.SaveChangesAsync(ct);
+        var domainEvents = domainEventCollector.GetDomainEvents();
+        await dbContext.SaveChangesAsync(ct);
+
+        if (domainEvents.Count == 0)
+        {
+            return;
+        }
+
+        await domainEventDispatcher.DispatchAsync(domainEvents, ct);
+        domainEventCollector.Clear();
     }
 }
 ```
@@ -452,8 +507,24 @@ public sealed class EfUnitOfWork(AppDbContext dbContext) : IUnitOfWork
 **Warum UnitOfWork?**
 - Explizite Transaktionsgrenze
 - Entkopplung von EF Core (`SaveChangesAsync` ist Implementierungsdetail)
+- Zentraler Hook für Domain-Event-Dispatch nach Persistenz
 
 ---
+
+#### 4.3.5 Observability/Audit
+
+Die Infrastructure-Schicht stellt einen einfachen Audit-Writer bereit:
+
+```csharp
+public sealed class LoggerAuditWriter(ILogger<LoggerAuditWriter> logger) : IAuditWriter
+{
+    public Task WriteAsync(string message, CancellationToken cancellationToken = default)
+    {
+        logger.LogInformation("Audit: {Message}", message);
+        return Task.CompletedTask;
+    }
+}
+```
 
 ### 4.4 API (eLetter25.API)
 
@@ -470,17 +541,25 @@ public sealed class EfUnitOfWork(AppDbContext dbContext) : IUnitOfWork
 
 ```csharp
 // MediatR
-builder.Services.AddMediatR(cfg => 
+builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(CreateLetterHandler).Assembly));
 
-// EF Core
+// JWT Optionen (mit Validierung)
+builder.Services.AddOptions<JwtOptions>()
+    .BindConfiguration(JwtOptions.SectionName)
+    .ValidateDataAnnotations()
+    .Validate(o => !string.IsNullOrWhiteSpace(o.SecretKey), "Jwt:SecretKey fehlt")
+    .ValidateOnStart();
+
+// EF Core: Identity (PostgreSQL) + Letters (SQL Server)
+builder.Services.AddDbContext<MsIdentityDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("users-db")));
+
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+    .AddEntityFrameworkStores<MsIdentityDbContext>();
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-{
-    var cs = builder.Configuration.GetConnectionString("eletter25db");
-    if (string.IsNullOrEmpty(cs))
-        throw new InvalidOperationException("Connection string 'eletter25db' not found.");
-    options.UseSqlServer(cs);
-});
+    options.UseSqlServer(builder.Configuration.GetConnectionString("eletter25-db")));
 
 // Ports → Adapters
 builder.Services.AddScoped<ILetterDomainToDbMapper, LetterDomainToDbMapper>();
@@ -488,82 +567,70 @@ builder.Services.AddScoped<ILetterDbToDomainMapper, LetterDbToDomainMapper>();
 builder.Services.AddScoped<ILetterRepository, EfLetterRepository>();
 builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
-// Auth (Keycloak)
-builder.Services.AddAuthentication().AddKeycloakJwtBearer(
-    serviceName: "keycloak",
-    realm: "eLetter25API",
-    options =>
+// JWT Auth
+builder.Services.AddAuthentication(options =>
     {
-        options.Audience = "eLetter25.API";
-        if (builder.Environment.IsDevelopment())
-            options.RequireHttpsMetadata = false;
-    });
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer();
 ```
 
 **Wichtig:**
 - Registrierungen sind `Scoped` (nicht `Singleton`), da EF Core DbContext nicht thread-safe ist
 - Connection String wird zur Laufzeit erwartet (Aspire injiziert ihn)
+- JWT-Parameter werden über `JwtOptions` gebunden und beim Start validiert
 
 #### 4.4.2 Endpoints
 
-**Minimal APIs:**
+**Controller-basierte Endpoints:**
 ```csharp
 app.MapGet("/", () => "eLetter25.API is running...");
-
-app.MapGet("/health", () => Results.Ok("Healthy"))
-    .RequireAuthorization(); // ⚠️ Für Ops-Tools evtl. problematisch
-
-app.MapPost("/letters", async (
-    CreateLetterRequest request,
-    IMediator mediator,
-    CancellationToken ct) =>
-{
-    var result = await mediator.Send(new CreateLetterCommand(request), ct);
-    return Results.Created($"/letters/{result.LetterId}", result);
-});
+app.MapControllers();
 ```
 
 **Wichtig:**
-- `Results.Created()` statt `Results.Ok()` für POST (REST-Konvention)
-- CancellationToken wird automatisch gebunden
-- `/health` sollte **nicht** autorisiert sein (LoadBalancer/Kubernetes brauchen Zugriff)
+- Auth-Endpoints liegen unter `/api/auth` (Login/Register)
+- OpenAPI + Scalar werden nur im Development-Modus gemappt
 
 ---
 
 ### 4.5 Host (eLetter25.Host)
 
 **Verantwortung:**
-- Lokale Orchestrierung (Keycloak, SQL Server, API)
+- Lokale Orchestrierung (PostgreSQL, SQL Server, API, Angular Client)
 - Service Discovery
-- Telemetrie/Logging (OTLP)
 
 **Aspire Resources:**
 ```csharp
 var builder = DistributedApplication.CreateBuilder(args);
 
-var keycloak = builder.AddKeycloak("keycloak", 8080)
+var usersDb = builder.AddPostgres("Identity")
     .WithDataVolume()
-    .WithOtlpExporter();
+    .AddDatabase("users-db");
 
-var sqlServer = builder.AddSqlServer("sqlserver")
-    .WithLifetime(ContainerLifetime.Persistent)
+var persistence = builder.AddSqlServer("Persistence")
     .WithDataVolume();
 
-var database = sqlServer.AddDatabase("eletter25db");
+var db = persistence.AddDatabase("eletter25-db");
 
-var letterAPI = builder.AddProject<Projects.eLetter25_API>("letterAPI")
-    .WithReference(keycloak)
-    .WaitFor(keycloak)
-    .WithReference(database)
-    .WaitFor(database);
+var letterApi = builder.AddProject<Projects.eLetter25_API>("API")
+    .WithReference(usersDb)
+    .WithReference(db)
+    .WaitFor(db)
+    .WaitFor(usersDb);
+
+var client = builder.AddNpmApp("Client", "../eLetter25.Client/eLetter25.Client", "start")
+    .WithReference(letterApi)
+    .WithHttpEndpoint(env: "PORT")
+    .WithExternalHttpEndpoints();
 
 builder.Build().Run();
 ```
 
 **Wichtig:**
 - `WaitFor()` erzwingt Start-Reihenfolge
-- Connection String wird automatisch injiziert
-- Keycloak-Konfiguration muss manuell erfolgen (Realm, Client-ID)
+- Connection Strings werden automatisch injiziert
 
 ---
 
@@ -702,17 +769,19 @@ public sealed class RegisterController(IMediator mediator) : ControllerBase
         [FromBody] RegisterUserRequest request,
         CancellationToken cancellationToken = default)
     {
-        try
+        var result = await mediator.Send(
+            new RegisterUserCommand(request),
+            cancellationToken);
+
+        if (result.IsFailure)
         {
-            var result = await mediator.Send(
-                new RegisterUserCommand(request), 
-                cancellationToken);
-            return Ok(new { userId = result.UserId, message = result.Message });
+            return BadRequest(new
+            {
+                errors = result.Errors.Select(e => new { code = e.Code, message = e.Message })
+            });
         }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { error = ex.Message });
-        }
+
+        return Ok(new { userId = result.Value!.UserId, message = result.Value.Message });
     }
 }
 ```
@@ -748,6 +817,8 @@ Infrastructure: ASP.NET Identity + PostgreSQL
 ## 5. Daten- und Kontrollfluss
 
 ### 5.1 Typischer Request-Flow (CreateLetter)
+
+**Hinweis:** Der Create-Letter-Use-Case ist im Application-Layer vorhanden, aktuell aber noch nicht als API-Endpoint verdrahtet. Der folgende Flow beschreibt die geplante End-to-End-Ausführung.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -798,7 +869,7 @@ Infrastructure: ASP.NET Identity + PostgreSQL
 ┌────────────────────────────────────────────────────────────────────────┐
 │  7. Response                                                           │
 │     - CreateLetterResult(letter.Id)                                    │
-│     - HTTP 201 Created, Location: /letters/{id}                        │
+│     - (API-Endpoint folgt)                                             │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -827,13 +898,14 @@ Infrastructure: ASP.NET Identity + PostgreSQL
 | **Mapper** | Domain ↔ DB Konvertierung | `ILetterDomainToDbMapper` |
 | **Dependency Injection** | Alle Schichten | ASP.NET Core DI Container |
 | **CQRS-Light** | Command/Query-Trennung (vorbereitet) | Commands via MediatR |
+| **Domain Events** | Zustandsänderungen kommunizieren | `LetterCreatedEvent` |
 
 ### 6.2 Nicht implementierte Patterns (Optional für Zukunft)
 
 - **CQRS (vollständig):** Separate Read/Write-Models
 - **Event Sourcing:** Domain Events statt State Persistence
 - **Specification Pattern:** Komplexe Queries
-- **Domain Events:** z.B. `LetterCreatedEvent`
+- **Outbox Pattern:** Persistente Events mit garantierter Zustellung
 
 ---
 
@@ -898,8 +970,8 @@ Infrastructure: ASP.NET Identity + PostgreSQL
 
 ### 8.1 Fehlende Komponenten (Critical)
 
-1. **Tests**
-   - Unit Tests für Domain (z.B. `LetterTests.cs`)
+1. **Tests ausbauen**
+   - Mehr Unit Tests für Domain-Logik
    - Integration Tests für Repositories
    - API Tests (z.B. WebApplicationFactory)
 
@@ -921,12 +993,12 @@ Infrastructure: ASP.NET Identity + PostgreSQL
 - **Query Use Cases:** `GetLetterByIdQuery`, `SearchLettersQuery`
 - **Update/Delete:** `UpdateLetterCommand`, `DeleteLetterCommand`
 - **Pagination:** `PagedResult<T>`, `PagingParameters`
-- **Domain Events:** `ILetterCreatedEvent`, Event Handler
+- **Weitere Domain-Events:** z.B. `LetterDeletedEvent` + Handler
 - **Authorization:** Policy-based (z.B. nur eigene Briefe editieren)
 
 ### 8.3 Infrastruktur-Verbesserungen
 
-- **Health Checks:** EF Core, SQL Server, Keycloak
+- **Health Checks:** EF Core, SQL Server, PostgreSQL
 - **Caching:** Distributed Cache (Redis) für Queries
 - **Background Jobs:** z.B. Hangfire für asynchrone Verarbeitung
 - **API Versioning:** URL-based oder Header-based
@@ -937,12 +1009,9 @@ Infrastructure: ASP.NET Identity + PostgreSQL
 
 | Problem | Severity | Beschreibung | Lösung |
 |---------|----------|--------------|--------|
-| **ASPIRE004 Warning** | Low | Host referenziert `Infrastructure` | Referenz entfernen |
-| **Health Endpoint geschützt** | Medium | `/health` benötigt Auth | `RequireAuthorization()` entfernen |
+| **Letters API fehlt** | Medium | CreateLetter existiert nur im Application-Layer | API-Endpoint hinzufügen |
 | **Fehlende Email-Validierung** | Medium | `Email` hat nur simple Prüfung | Regex oder externe Library |
 | **Mutable Value Objects** | Low | `Correspondent` hat `set;` | `init;` verwenden (Breaking Change für EF Core) |
-| **Keine Tests** | Critical | Keine Testprojekte | Testprojekte anlegen |
-| **RootNamespace inkonsistent** | Low | `etter25.API` statt `eLetter25.API` | `.csproj` korrigieren |
 
 ---
 
@@ -989,7 +1058,7 @@ Beim Hinzufügen neuer Features diese Schritte befolgen:
 
 - **IDE:** JetBrains Rider (oder Visual Studio 2025)
 - **.NET SDK:** 10.0
-- **Docker:** Für SQL Server + Keycloak (via Aspire)
+- **Docker:** Für SQL Server + PostgreSQL (via Aspire)
 - **EF Core Tools:** `dotnet ef` für Migrations
 
 ### 11.2 Nützliche Befehle
@@ -1024,4 +1093,3 @@ dotnet test
 ---
 
 **Ende der Dokumentation**
-
