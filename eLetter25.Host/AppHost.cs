@@ -8,17 +8,20 @@ var usersDb = builder.AddPostgres("Identity")
     .WithLifetime(ContainerLifetime.Persistent)
     .AddDatabase("users-db");
 
-var persistence = builder.AddSqlServer("Persistence")
-    .WithHostPort(6583)
+var persistence = builder.AddPostgres("Persistence")
+    .WithHostPort(5583)
     .WithDataVolume()
     .WithLifetime(ContainerLifetime.Persistent);
 
-var db = persistence.AddDatabase("eletter25-db");
+var appDb = persistence.AddDatabase("eletter25-db");
+var hangfireDb = persistence.AddDatabase("hangfire-db");
 
 var letterApi = builder.AddProject<eLetter25_API>("API")
     .WithReference(usersDb)
-    .WithReference(db)
-    .WaitFor(db)
+    .WithReference(appDb)
+    .WithReference(hangfireDb)
+    .WaitFor(appDb)
+    .WaitFor(hangfireDb)
     .WaitFor(usersDb);
 
 var client = builder.AddNpmApp("Client", Path.Combine("..", "eLetter25.Client", "eLetter25.Client"), "start")

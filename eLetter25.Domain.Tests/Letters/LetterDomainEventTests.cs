@@ -3,6 +3,7 @@ using eLetter25.Domain.Letters.Events;
 using eLetter25.Domain.Letters.ValueObjects;
 using eLetter25.Domain.Shared.ValueObjects;
 using FluentAssertions;
+using Xunit;
 
 namespace eLetter25.Domain.Tests.Letters;
 
@@ -16,11 +17,17 @@ public sealed class LetterDomainEventTests
 
         var letter = Letter.Create(sender, recipient, DateTimeOffset.UtcNow);
 
-        letter.DomainEvents.Should().ContainSingle(@event =>
-            @event is LetterCreatedEvent created &&
-            created.LetterId == letter.Id &&
-            created.SentDate == letter.SentDate &&
-            created.CreatedDate == letter.CreatedDate);
+        var createdEvent = letter.DomainEvents
+            .Should()
+            .ContainSingle()
+            .Which
+            .Should()
+            .BeOfType<LetterCreatedEvent>()
+            .Which;
+
+        createdEvent.LetterId.Should().Be(letter.Id);
+        createdEvent.SentDate.Should().Be(letter.SentDate);
+        createdEvent.CreatedDate.Should().Be(letter.CreatedDate);
     }
 
     [Fact]
@@ -36,10 +43,17 @@ public sealed class LetterDomainEventTests
         letter.AddTag(tag);
 
         letter.Tags.Should().ContainSingle(t => t.Equals(tag));
-        letter.DomainEvents.Should().ContainSingle(@event =>
-            @event is LetterTagAddedEvent tagEvent &&
-            tagEvent.LetterId == letter.Id &&
-            tagEvent.Tag == tag.Value);
+
+        var tagAddedEvent = letter.DomainEvents
+            .Should()
+            .ContainSingle()
+            .Which
+            .Should()
+            .BeOfType<LetterTagAddedEvent>()
+            .Which;
+
+        tagAddedEvent.LetterId.Should().Be(letter.Id);
+        tagAddedEvent.Tag.Should().Be(tag.Value);
     }
 
     private static Correspondent CreateCorrespondent(string name)
