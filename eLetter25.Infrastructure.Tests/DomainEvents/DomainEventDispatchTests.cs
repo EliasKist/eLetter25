@@ -8,6 +8,7 @@ using eLetter25.Infrastructure.Persistence.Letters.Mappings;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Xunit;
 
 namespace eLetter25.Infrastructure.Tests.DomainEvents;
 

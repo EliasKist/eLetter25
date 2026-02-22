@@ -57,3 +57,29 @@ nunit-*.xml
 .idea/
 *.sln.iml
 *.sln.DotSettings.user
+
+# ---------------------------------------------
+# Node.js / Angular (Client)
+# ---------------------------------------------
+**/node_modules/
+**/dist/
+**/out-tsc/
+**/.angular/
+**/.cache/
+
+# Angular/TypeScript build artifacts
+**/coverage/
+**/*.tsbuildinfo
+
+# Package manager caches / debug logs
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/pnpm-debug.log*
+
+# Environment files should be versioned only if intentionally committed
+# (keep default: do not ignore)
+
+# OS
+.DS_Store
+Thumbs.db

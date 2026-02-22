@@ -11,6 +11,8 @@ using eLetter25.Infrastructure.Observability;
 using eLetter25.Infrastructure.Persistence;
 using eLetter25.Infrastructure.Persistence.Letters;
 using eLetter25.Infrastructure.Persistence.Letters.Mappings;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -40,7 +42,31 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<MsIdentityDbContext>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("eletter25-db")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("eletter25-db")));
+
+builder.Services.AddHangfire((_, config) =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("hangfire-db")
+                           ?? builder.Configuration.GetConnectionString("eletter25-db");
+
+    if (string.IsNullOrWhiteSpace(connectionString))
+    {
+        throw new InvalidOperationException(
+            "Connection string configuration is missing. Please ensure either " +
+            "\"ConnectionStrings:hangfire-db\" or \"ConnectionStrings:eletter25-db\" is configured.");
+    }
+
+    config
+        .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+        .UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings()
+        .UsePostgreSqlStorage(o => o.UseNpgsqlConnection(connectionString), new PostgreSqlStorageOptions
+        {
+            SchemaName = "hangfire"
+        });
+});
+
+builder.Services.AddHangfireServer();
 
 builder.Services.AddAuthentication(options =>
     {
@@ -70,7 +96,6 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
         };
     });
 
-
 builder.Services.AddAuthorization();
 
 // Application Services
@@ -88,7 +113,6 @@ builder.Services.AddScoped<IUserAuthenticationService, UserAuthenticationService
 builder.Services.AddScoped<IUserRegistrationService, UserRegistrationService>();
 
 var app = builder.Build();
-
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -124,6 +148,8 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseHangfireDashboard();
 
 app.MapControllers();
 
