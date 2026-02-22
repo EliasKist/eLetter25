@@ -1,120 +1,21 @@
-using System.Text;
-using eLetter25.Application.Auth.Options;
-using eLetter25.Application.Auth.Ports;
-using eLetter25.Application.Common.Ports;
-using eLetter25.Application.Letters.Ports;
-using eLetter25.Application.Letters.UseCases.CreateLetter;
+using eLetter25.API;
+using eLetter25.Application;
+using eLetter25.Infrastructure;
 using eLetter25.Infrastructure.Auth.Data;
-using eLetter25.Infrastructure.Auth.Services;
-using eLetter25.Infrastructure.DomainEvents;
-using eLetter25.Infrastructure.Observability;
 using eLetter25.Infrastructure.Persistence;
-using eLetter25.Infrastructure.Persistence.Letters;
-using eLetter25.Infrastructure.Persistence.Letters.Mappings;
 using Hangfire;
-using Hangfire.PostgreSql;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Options Pattern für JWT-Konfiguration mit Validierung
-builder.Services.AddOptions<JwtOptions>()
-    .BindConfiguration(JwtOptions.SectionName)
-    .ValidateDataAnnotations()
-    .Validate(o => !string.IsNullOrWhiteSpace(o.SecretKey), "Jwt:SecretKey fehlt")
-    .ValidateOnStart();
-
-builder.Services.AddOpenApi();
-builder.Services.AddControllers();
-
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(CreateLetterHandler).Assembly));
-
-builder.Services.AddDbContext<MsIdentityDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("users-db")));
-
-
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-    .AddEntityFrameworkStores<MsIdentityDbContext>();
-
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("eletter25-db")));
-
-builder.Services.AddHangfire((_, config) =>
-{
-    var connectionString = builder.Configuration.GetConnectionString("hangfire-db")
-                           ?? builder.Configuration.GetConnectionString("eletter25-db");
-
-    if (string.IsNullOrWhiteSpace(connectionString))
-    {
-        throw new InvalidOperationException(
-            "Connection string configuration is missing. Please ensure either " +
-            "\"ConnectionStrings:hangfire-db\" or \"ConnectionStrings:eletter25-db\" is configured.");
-    }
-
-    config
-        .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-        .UseSimpleAssemblyNameTypeSerializer()
-        .UseRecommendedSerializerSettings()
-        .UsePostgreSqlStorage(o => o.UseNpgsqlConnection(connectionString), new PostgreSqlStorageOptions
-        {
-            SchemaName = "hangfire"
-        });
-});
-
-builder.Services.AddHangfireServer();
-
-builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer();
-
-builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
-    .Configure<IOptions<JwtOptions>>((options, jwtOpt) =>
-    {
-        var jwt = jwtOpt.Value;
-
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidIssuer = jwt.Issuer,
-
-            ValidateAudience = true,
-            ValidAudience = jwt.Audience,
-
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SecretKey)),
-
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromMinutes(1)
-        };
-    });
-
-builder.Services.AddAuthorization();
-
-// Application Services
-builder.Services.AddScoped<ILetterDomainToDbMapper, LetterDomainToDbMapper>();
-builder.Services.AddScoped<ILetterDbToDomainMapper, LetterDbToDomainMapper>();
-builder.Services.AddScoped<ILetterRepository, EfLetterRepository>();
-builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork>();
-builder.Services.AddScoped<IDomainEventCollector, DomainEventCollector>();
-builder.Services.AddScoped<IDomainEventDispatcher, MediatRDomainEventDispatcher>();
-builder.Services.AddScoped<IAuditWriter, LoggerAuditWriter>();
-
-// Auth Services
-builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
-builder.Services.AddScoped<IUserAuthenticationService, UserAuthenticationService>();
-builder.Services.AddScoped<IUserRegistrationService, UserRegistrationService>();
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddWeb(builder.Configuration);
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -140,7 +41,6 @@ if (app.Environment.IsDevelopment())
     }
 }
 
-// Middleware and Endpoints
 
 app.MapGet("/", () => "eLetter25.API is running...");
 
