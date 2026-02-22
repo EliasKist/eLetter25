@@ -1,12 +1,16 @@
 ﻿using eLetter25.Application.Common.Options;
 using eLetter25.Application.Common.Ports;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace eLetter25.Infrastructure.DocumentStorage;
 
-public sealed class LocalFileSystemDocumentStorage(IOptions<DocumentStorageOptions> options) : IDocumentStorage
+public sealed class LocalFileSystemDocumentStorage(
+    IOptions<DocumentStorageOptions> options,
+    IWebHostEnvironment hostEnvironment) : IDocumentStorage
 {
     private readonly DocumentStorageOptions _options = options.Value;
+    private readonly IWebHostEnvironment _hostEnvironment = hostEnvironment;
 
     /// <inheritdoc />
     public async Task StorePdfAsync(Guid documentId, Stream pdfContent, CancellationToken cancellationToken = default)
@@ -23,10 +27,12 @@ public sealed class LocalFileSystemDocumentStorage(IOptions<DocumentStorageOptio
             throw new InvalidOperationException("DocumentStorage:BasePath is not configured.");
         }
 
-        Directory.CreateDirectory(_options.BasePath);
+        var resolvedBasePath = ResolveAndValidateBasePath(_options.BasePath);
 
-        var destinationPath = Path.Combine(_options.BasePath, $"{documentId:D}.pdf");
-        var tempPath = Path.Combine(_options.BasePath, $"{documentId:D}.pdf.tmp");
+        Directory.CreateDirectory(resolvedBasePath);
+
+        var destinationPath = Path.Combine(resolvedBasePath, $"{documentId:D}.pdf");
+        var tempPath = Path.Combine(resolvedBasePath, $"{documentId:D}.pdf.tmp");
 
         await using (var targetStream = new FileStream(
                          tempPath,
@@ -45,6 +51,49 @@ public sealed class LocalFileSystemDocumentStorage(IOptions<DocumentStorageOptio
             await targetStream.FlushAsync(cancellationToken);
         }
 
-        File.Move(tempPath, destinationPath, overwrite: true);
+        try
+        {
+            File.Move(tempPath, destinationPath, overwrite: true);
+        }
+        catch
+        {
+            try
+            {
+                if (File.Exists(tempPath))
+                {
+                    File.Delete(tempPath);
+                }
+            }
+            catch (Exception cleanupException)
+            {
+                throw new InvalidOperationException(
+                    "Failed to move stored document to destination path and cleanup of temporary file also failed.",
+                    cleanupException);
+            }
+
+            throw;
+        }
+    }
+
+    private string ResolveAndValidateBasePath(string basePath)
+    {
+        if (Path.IsPathRooted(basePath))
+        {
+            return basePath;
+        }
+
+        var contentRoot = Path.GetFullPath(_hostEnvironment.ContentRootPath)
+                              .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                          + Path.DirectorySeparatorChar;
+
+        var resolved = Path.GetFullPath(Path.Combine(contentRoot, basePath));
+
+        if (!resolved.StartsWith(contentRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"DocumentStorage:BasePath resolves outside ContentRootPath. BasePath='{basePath}'.");
+        }
+
+        return resolved;
     }
 }

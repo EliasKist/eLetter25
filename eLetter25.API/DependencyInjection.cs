@@ -22,13 +22,13 @@ public static class DependencyInjection
         services.AddOptions<JwtOptions>()
             .BindConfiguration(JwtOptions.SectionName)
             .ValidateDataAnnotations()
-            .Validate(o => !string.IsNullOrWhiteSpace(o.SecretKey), "Jwt:SecretKey fehlt")
+            .Validate(o => !string.IsNullOrWhiteSpace(o.SecretKey), "Jwt:SecretKey is missing")
             .ValidateOnStart();
 
         services.AddOptions<DocumentStorageOptions>()
             .BindConfiguration(DocumentStorageOptions.SectionName)
             .ValidateDataAnnotations()
-            .Validate(o => !string.IsNullOrWhiteSpace(o.BasePath), "DocumentStorage:BasePath fehlt")
+            .Validate(o => !string.IsNullOrWhiteSpace(o.BasePath), "DocumentStorage:BasePath is missing")
             .ValidateOnStart();
 
         services.AddDbContext<MsIdentityDbContext>(options =>

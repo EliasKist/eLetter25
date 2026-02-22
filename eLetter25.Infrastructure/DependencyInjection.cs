@@ -37,4 +37,3 @@ public static class DependencyInjection
         services.AddScoped<IUserRegistrationService, UserRegistrationService>();
     }
 }
-
