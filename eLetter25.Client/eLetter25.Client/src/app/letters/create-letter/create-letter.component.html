@@ -1,0 +1,317 @@
+﻿<div class="page">
+  <div class="page-header">
+    <h1 class="page-title">Create Letter</h1>
+    <p class="page-subtitle">Fill in the details below to create a new letter.</p>
+  </div>
+
+  @if (successLetterId) {
+    <div class="alert alert--success" role="alert">
+      <span class="alert__icon">✓</span>
+      Letter created successfully. ID: <strong>{{ successLetterId }}</strong>
+    </div>
+  }
+
+  @if (errorMessage) {
+    <div class="alert alert--error" role="alert">
+      <span class="alert__icon">✕</span>
+      {{ errorMessage }}
+    </div>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+
+    <!-- General Information -->
+    <section class="form-section">
+      <h2 class="form-section__title">General Information</h2>
+      <div class="form-row">
+        <div class="form-field">
+          <label class="form-label" for="subject">Subject <span class="required">*</span></label>
+          <input
+            id="subject"
+            type="text"
+            class="form-input"
+            [class.form-input--error]="hasError('subject')"
+            formControlName="subject"
+            placeholder="Enter letter subject"
+            maxlength="200"
+          />
+          @if (hasError('subject')) {
+            <span class="form-error">{{ getErrorMessage('subject') }}</span>
+          }
+        </div>
+
+        <div class="form-field">
+          <label class="form-label" for="sentDate">Sent Date <span class="required">*</span></label>
+          <input
+            id="sentDate"
+            type="date"
+            class="form-input"
+            [class.form-input--error]="hasError('sentDate')"
+            formControlName="sentDate"
+          />
+          @if (hasError('sentDate')) {
+            <span class="form-error">{{ getErrorMessage('sentDate') }}</span>
+          }
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label class="form-label" for="tags">Tags</label>
+        <input
+          id="tags"
+          type="text"
+          class="form-input"
+          formControlName="tags"
+          placeholder="Comma-separated, e.g. invoice, urgent, 2026"
+        />
+        <span class="form-hint">Separate multiple tags with commas.</span>
+      </div>
+    </section>
+
+    <!-- Correspondents -->
+    <div class="correspondents-grid">
+
+      <!-- Sender -->
+      <section class="form-section" formGroupName="sender">
+        <h2 class="form-section__title">Sender</h2>
+
+        <div class="form-field">
+          <label class="form-label" for="senderName">Name <span class="required">*</span></label>
+          <input
+            id="senderName"
+            type="text"
+            class="form-input"
+            [class.form-input--error]="hasError('sender.name')"
+            formControlName="name"
+            placeholder="Full name or company"
+          />
+          @if (hasError('sender.name')) {
+            <span class="form-error">{{ getErrorMessage('sender.name') }}</span>
+          }
+        </div>
+
+        <div formGroupName="address">
+          <div class="form-field">
+            <label class="form-label" for="senderStreet">Street <span class="required">*</span></label>
+            <input
+              id="senderStreet"
+              type="text"
+              class="form-input"
+              [class.form-input--error]="hasError('sender.address.street')"
+              formControlName="street"
+              placeholder="Street and house number"
+            />
+            @if (hasError('sender.address.street')) {
+              <span class="form-error">{{ getErrorMessage('sender.address.street') }}</span>
+            }
+          </div>
+
+          <div class="form-row">
+            <div class="form-field">
+              <label class="form-label" for="senderPostalCode">Postal Code <span class="required">*</span></label>
+              <input
+                id="senderPostalCode"
+                type="text"
+                class="form-input"
+                [class.form-input--error]="hasError('sender.address.postalCode')"
+                formControlName="postalCode"
+                placeholder="12345"
+              />
+              @if (hasError('sender.address.postalCode')) {
+                <span class="form-error">{{ getErrorMessage('sender.address.postalCode') }}</span>
+              }
+            </div>
+
+            <div class="form-field">
+              <label class="form-label" for="senderCity">City <span class="required">*</span></label>
+              <input
+                id="senderCity"
+                type="text"
+                class="form-input"
+                [class.form-input--error]="hasError('sender.address.city')"
+                formControlName="city"
+                placeholder="City"
+              />
+              @if (hasError('sender.address.city')) {
+                <span class="form-error">{{ getErrorMessage('sender.address.city') }}</span>
+              }
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label class="form-label" for="senderCountry">Country <span class="required">*</span></label>
+            <input
+              id="senderCountry"
+              type="text"
+              class="form-input"
+              [class.form-input--error]="hasError('sender.address.country')"
+              formControlName="country"
+              placeholder="Country"
+            />
+            @if (hasError('sender.address.country')) {
+              <span class="form-error">{{ getErrorMessage('sender.address.country') }}</span>
+            }
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label class="form-label" for="senderEmail">Email</label>
+            <input
+              id="senderEmail"
+              type="email"
+              class="form-input"
+              [class.form-input--error]="hasError('sender.email')"
+              formControlName="email"
+              placeholder="email@example.com"
+            />
+            @if (hasError('sender.email')) {
+              <span class="form-error">{{ getErrorMessage('sender.email') }}</span>
+            }
+          </div>
+
+          <div class="form-field">
+            <label class="form-label" for="senderPhone">Phone</label>
+            <input
+              id="senderPhone"
+              type="tel"
+              class="form-input"
+              formControlName="phone"
+              placeholder="+49 123 456789"
+            />
+          </div>
+        </div>
+      </section>
+
+      <!-- Recipient -->
+      <section class="form-section" formGroupName="recipient">
+        <h2 class="form-section__title">Recipient</h2>
+
+        <div class="form-field">
+          <label class="form-label" for="recipientName">Name <span class="required">*</span></label>
+          <input
+            id="recipientName"
+            type="text"
+            class="form-input"
+            [class.form-input--error]="hasError('recipient.name')"
+            formControlName="name"
+            placeholder="Full name or company"
+          />
+          @if (hasError('recipient.name')) {
+            <span class="form-error">{{ getErrorMessage('recipient.name') }}</span>
+          }
+        </div>
+
+        <div formGroupName="address">
+          <div class="form-field">
+            <label class="form-label" for="recipientStreet">Street <span class="required">*</span></label>
+            <input
+              id="recipientStreet"
+              type="text"
+              class="form-input"
+              [class.form-input--error]="hasError('recipient.address.street')"
+              formControlName="street"
+              placeholder="Street and house number"
+            />
+            @if (hasError('recipient.address.street')) {
+              <span class="form-error">{{ getErrorMessage('recipient.address.street') }}</span>
+            }
+          </div>
+
+          <div class="form-row">
+            <div class="form-field">
+              <label class="form-label" for="recipientPostalCode">Postal Code <span class="required">*</span></label>
+              <input
+                id="recipientPostalCode"
+                type="text"
+                class="form-input"
+                [class.form-input--error]="hasError('recipient.address.postalCode')"
+                formControlName="postalCode"
+                placeholder="12345"
+              />
+              @if (hasError('recipient.address.postalCode')) {
+                <span class="form-error">{{ getErrorMessage('recipient.address.postalCode') }}</span>
+              }
+            </div>
+
+            <div class="form-field">
+              <label class="form-label" for="recipientCity">City <span class="required">*</span></label>
+              <input
+                id="recipientCity"
+                type="text"
+                class="form-input"
+                [class.form-input--error]="hasError('recipient.address.city')"
+                formControlName="city"
+                placeholder="City"
+              />
+              @if (hasError('recipient.address.city')) {
+                <span class="form-error">{{ getErrorMessage('recipient.address.city') }}</span>
+              }
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label class="form-label" for="recipientCountry">Country <span class="required">*</span></label>
+            <input
+              id="recipientCountry"
+              type="text"
+              class="form-input"
+              [class.form-input--error]="hasError('recipient.address.country')"
+              formControlName="country"
+              placeholder="Country"
+            />
+            @if (hasError('recipient.address.country')) {
+              <span class="form-error">{{ getErrorMessage('recipient.address.country') }}</span>
+            }
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label class="form-label" for="recipientEmail">Email</label>
+            <input
+              id="recipientEmail"
+              type="email"
+              class="form-input"
+              [class.form-input--error]="hasError('recipient.email')"
+              formControlName="email"
+              placeholder="email@example.com"
+            />
+            @if (hasError('recipient.email')) {
+              <span class="form-error">{{ getErrorMessage('recipient.email') }}</span>
+            }
+          </div>
+
+          <div class="form-field">
+            <label class="form-label" for="recipientPhone">Phone</label>
+            <input
+              id="recipientPhone"
+              type="tel"
+              class="form-input"
+              formControlName="phone"
+              placeholder="+49 123 456789"
+            />
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /.correspondents-grid -->
+
+    <div class="form-actions">
+      <button
+        type="submit"
+        class="btn btn--primary"
+        [disabled]="isSubmitting"
+      >
+        @if (isSubmitting) {
+          <span class="btn__spinner" aria-hidden="true"></span>
+          Creating…
+        } @else {
+          Create Letter
+        }
+      </button>
+    </div>
+
+  </form>
+</div>
+

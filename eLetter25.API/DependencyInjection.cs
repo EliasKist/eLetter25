@@ -14,10 +14,22 @@ namespace eLetter25.API;
 
 public static class DependencyInjection
 {
+    public const string CorsPolicyName = "AngularClient";
+
     public static void AddWeb(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddOpenApi();
         services.AddControllers();
+
+        var allowedOrigins = configuration
+            .GetSection("Cors:AllowedOrigins")
+            .Get<string[]>() ?? [];
+
+        services.AddCors(options =>
+            options.AddPolicy(CorsPolicyName, policy =>
+                policy.WithOrigins(allowedOrigins)
+                      .AllowAnyMethod()
+                      .AllowAnyHeader()));
 
         services.AddOptions<JwtOptions>()
             .BindConfiguration(JwtOptions.SectionName)

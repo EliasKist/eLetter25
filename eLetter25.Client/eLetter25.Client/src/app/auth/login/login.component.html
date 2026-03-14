@@ -1,0 +1,65 @@
+﻿<div class="auth-page">
+  <div class="auth-card">
+
+    <div class="auth-card__header">
+      <h1 class="auth-card__title">Welcome back</h1>
+      <p class="auth-card__subtitle">Sign in to your eLetter25 account</p>
+    </div>
+
+    @if (errorMessage) {
+      <div class="alert alert--error" role="alert">{{ errorMessage }}</div>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+
+      <div class="form-field">
+        <label class="form-label" for="email">Email <span class="required">*</span></label>
+        <input
+          id="email"
+          type="email"
+          class="form-input"
+          [class.form-input--error]="hasError('email')"
+          formControlName="email"
+          placeholder="you@example.com"
+          autocomplete="email"
+        />
+        @if (hasError('email')) {
+          <span class="form-error">{{ getErrorMessage('email') }}</span>
+        }
+      </div>
+
+      <div class="form-field">
+        <label class="form-label" for="password">Password <span class="required">*</span></label>
+        <input
+          id="password"
+          type="password"
+          class="form-input"
+          [class.form-input--error]="hasError('password')"
+          formControlName="password"
+          placeholder="••••••••"
+          autocomplete="current-password"
+        />
+        @if (hasError('password')) {
+          <span class="form-error">{{ getErrorMessage('password') }}</span>
+        }
+      </div>
+
+      <button type="submit" class="btn btn--primary btn--full" [disabled]="isSubmitting">
+        @if (isSubmitting) {
+          <span class="btn__spinner" aria-hidden="true"></span>
+          Signing in…
+        } @else {
+          Sign in
+        }
+      </button>
+
+    </form>
+
+    <p class="auth-card__footer">
+      Don't have an account?
+      <a routerLink="/register" class="auth-card__link">Create one</a>
+    </p>
+
+  </div>
+</div>
+
