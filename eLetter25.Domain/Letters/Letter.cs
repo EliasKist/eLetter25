@@ -33,7 +33,7 @@ public class Letter : DomainEntity
 
         if (sentDate == default)
         {
-            throw new ArgumentException("Sent date must be a valid date.", nameof(sentDate));
+            throw new DomainValidationException("Sent date must be a valid date.");
         }
 
         var letter = new Letter
@@ -51,7 +51,7 @@ public class Letter : DomainEntity
     {
         if (string.IsNullOrWhiteSpace(subject))
         {
-            throw new ArgumentException("Subject cannot be null or whitespace.", nameof(subject));
+            throw new DomainValidationException("Subject cannot be null or whitespace.");
         }
 
         var normalizedSubject = subject.Trim();

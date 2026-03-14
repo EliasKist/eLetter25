@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using eLetter25.API.ExceptionHandling;
 using eLetter25.Application.Auth.Options;
 using eLetter25.Application.Common.Options;
 using eLetter25.Infrastructure.Auth.Data;
@@ -20,6 +21,8 @@ public static class DependencyInjection
     {
         services.AddOpenApi();
         services.AddControllers();
+        services.AddProblemDetails();
+        services.AddExceptionHandler<GlobalExceptionHandler>();
 
         var allowedOrigins = configuration
             .GetSection("Cors:AllowedOrigins")

@@ -1,4 +1,6 @@
-﻿namespace eLetter25.Domain.Letters.ValueObjects;
+﻿using eLetter25.Domain.Common;
+
+namespace eLetter25.Domain.Letters.ValueObjects;
 
 /// <summary>
 /// Represents a tag associated with a letter.
@@ -11,7 +13,7 @@ public readonly record struct Tag
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            throw new ArgumentException("Value cannot be null or whitespace.", nameof(value));
+            throw new DomainValidationException("Tag value cannot be null or whitespace.");
         }
 
         Value = value;

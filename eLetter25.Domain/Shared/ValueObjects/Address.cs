@@ -1,4 +1,6 @@
-﻿namespace eLetter25.Domain.Shared.ValueObjects;
+﻿using eLetter25.Domain.Common;
+
+namespace eLetter25.Domain.Shared.ValueObjects;
 
 /// <summary>
 /// Represents a physical address.
@@ -14,22 +16,22 @@ public readonly record struct Address
     {
         if (string.IsNullOrWhiteSpace(street))
         {
-            throw new ArgumentException("Street cannot be null or whitespace.", nameof(street));
+            throw new DomainValidationException("Street cannot be null or whitespace.");
         }
 
         if (string.IsNullOrWhiteSpace(postalCode))
         {
-            throw new ArgumentException("Postal code cannot be null or whitespace.", nameof(postalCode));
+            throw new DomainValidationException("Postal code cannot be null or whitespace.");
         }
 
         if (string.IsNullOrWhiteSpace(city))
         {
-            throw new ArgumentException("City cannot be null or whitespace.", nameof(city));
+            throw new DomainValidationException("City cannot be null or whitespace.");
         }
 
         if (string.IsNullOrWhiteSpace(country))
         {
-            throw new ArgumentException("Country cannot be null or whitespace.", nameof(country));
+            throw new DomainValidationException("Country cannot be null or whitespace.");
         }
 
         Street = street;
