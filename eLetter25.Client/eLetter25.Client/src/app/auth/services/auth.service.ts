@@ -1,26 +1,27 @@
-﻿import { inject, Injectable, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+﻿import {inject, Injectable, signal} from '@angular/core';
+import {HttpClient} from '@angular/common/http';
+import {Observable, tap} from 'rxjs';
 import {
   LoginRequest,
   LoginResponse,
   RegisterRequest,
   RegisterResponse
 } from '../models/auth.models';
-import { environment } from '../../../environments/environment';
+import {environment} from '../../../environments/environment';
+import {TokenStorageService} from '../../core/services/token-storage.service';
 
-@Injectable({ providedIn: 'root' })
+@Injectable({providedIn: 'root'})
 export class AuthService {
   private readonly http = inject(HttpClient);
+  private readonly tokenStorage = inject(TokenStorageService);
   private readonly baseUrl = `${environment.apiUrl}/api/auth`;
-  private readonly tokenKey = 'access_token';
 
-  readonly isAuthenticated = signal(this.hasStoredToken());
+  readonly isAuthenticated = signal(this.tokenStorage.hasToken());
 
   login(request: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.baseUrl}/login`, request).pipe(
       tap(response => {
-        localStorage.setItem(this.tokenKey, response.accessToken);
+        this.tokenStorage.setToken(response.accessToken);
         this.isAuthenticated.set(true);
       })
     );
@@ -31,12 +32,7 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem(this.tokenKey);
+    this.tokenStorage.removeToken();
     this.isAuthenticated.set(false);
   }
-
-  private hasStoredToken(): boolean {
-    return !!localStorage.getItem(this.tokenKey);
-  }
 }
-
