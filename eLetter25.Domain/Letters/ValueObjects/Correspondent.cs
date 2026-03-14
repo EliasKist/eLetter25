@@ -1,4 +1,5 @@
-﻿using eLetter25.Domain.Shared.ValueObjects;
+﻿using eLetter25.Domain.Common;
+using eLetter25.Domain.Shared.ValueObjects;
 
 namespace eLetter25.Domain.Letters.ValueObjects;
 
@@ -20,7 +21,7 @@ public sealed record Correspondent
     {
         if (string.IsNullOrWhiteSpace(name))
         {
-            throw new ArgumentException("Name cannot be null or whitespace.", nameof(name));
+            throw new DomainValidationException("Correspondent name cannot be null or whitespace.");
         }
 
         Name = name;

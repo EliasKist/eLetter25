@@ -1,4 +1,6 @@
-﻿namespace eLetter25.Domain.Shared.ValueObjects;
+﻿using eLetter25.Domain.Common;
+
+namespace eLetter25.Domain.Shared.ValueObjects;
 
 /// <summary>
 /// Represents an email address.
@@ -12,7 +14,7 @@ public readonly record struct Email
         // Todo: Implement proper email validation
         if (string.IsNullOrWhiteSpace(value) || !value.Contains('@'))
         {
-            throw new ArgumentException("Invalid email address.", nameof(value));
+            throw new DomainValidationException("Invalid email address.");
         }
 
         Value = value;

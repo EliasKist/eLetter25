@@ -143,4 +143,21 @@ Code Quality and Maintainability
 - Avoid temporal coupling.
 - Ensure consistent null handling.
 
+Angular Frontend
+----------------
+
+- All shared visual styles (colors, typography, form elements, buttons, alerts, layout primitives) must be placed in
+  `src/styles.scss`. Component SCSS files must only contain styles that are specific to that component's layout or
+  structure. Never duplicate styles that already exist in `styles.scss`.
+- Use Angular standalone components exclusively. Do not use NgModules.
+- Shared utility functions (e.g. form validation helpers) belong in `src/app/core/utils/`.
+- Shared models/interfaces that are not specific to a single feature belong in `src/app/core/models/`.
+- Feature-specific models, services and components are co-located under their feature folder
+  (e.g. `src/app/letters/`, `src/app/auth/`).
+- Use Angular's functional route guards (`CanActivateFn`) instead of class-based guards.
+- Use the `inject()` function for dependency injection in standalone components and services.
+- Use Angular Signals for reactive state where applicable.
+- All HTTP error handling must extract structured error messages from the API error response body.
+
+
 
