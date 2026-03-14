@@ -45,6 +45,18 @@ public sealed class LetterDbToDomainMapper : ILetterDbToDomainMapper
         letter.ClearTags();
         letter.AddTags(entity.Tags.Select(t => new Tag(t.Tag)));
 
+        foreach (var docEntity in entity.Documents)
+        {
+            var document = LetterDocument.Reconstitute(
+                docEntity.Id,
+                docEntity.LetterId,
+                docEntity.DocumentFormat,
+                docEntity.Status,
+                docEntity.ContentHash,
+                docEntity.SizeInBytes);
+            letter.AddDocumentReconstituted(document);
+        }
+
         return letter;
     }
 }

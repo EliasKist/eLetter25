@@ -9,7 +9,7 @@ using eLetter25.Infrastructure.Persistence;
 
 #nullable disable
 
-namespace eLetter25.Infrastructure.Migrations
+namespace eLetter25.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     [Migration("20260222141905_Initial_Postgres")]

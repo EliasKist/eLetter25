@@ -22,9 +22,12 @@ public class Letter : DomainEntity
     public Guid? SenderReferenceId { get; private set; }
     public Guid? RecipientReferenceId { get; private set; }
 
-    private Letter() // For EF Core
+    private readonly List<LetterDocument> _documents = [];
+    public IReadOnlyCollection<LetterDocument> Documents => _documents.AsReadOnly();
+
+    private Letter()
     {
-    }
+    } // For EF Core
 
     public static Letter Create(Correspondent sender, Correspondent recipient, DateTimeOffset sentDate)
     {
@@ -99,6 +102,7 @@ public class Letter : DomainEntity
         {
             AddTag(tag);
         }
+
         return this;
     }
 
@@ -127,5 +131,25 @@ public class Letter : DomainEntity
     public bool HasTag(string tagName)
     {
         return Tags.Any(t => t.Value == tagName);
+    }
+
+    /// <summary>
+    /// Creates a new <see cref="LetterDocument"/> associated with this letter and registers it
+    /// in the aggregate. Raises <see cref="Events.LetterDocumentStatusChangedEvent"/>.
+    /// </summary>
+    public LetterDocument CreateDocument(DocumentFormat documentFormat)
+    {
+        var document = new LetterDocument(Id, documentFormat);
+        _documents.Add(document);
+        return document;
+    }
+
+    /// <summary>
+    /// Adds a reconstituted document from the persistence layer without raising domain events.
+    /// Must only be called by the persistence mapper.
+    /// </summary>
+    internal void AddDocumentReconstituted(LetterDocument document)
+    {
+        _documents.Add(document);
     }
 }

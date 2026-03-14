@@ -17,12 +17,18 @@ public sealed class EfLetterRepository(
         var entity = domainToDbMapper.MapToDbEntity(letter);
         await dbContext.Letters.AddAsync(entity, cancellationToken);
         domainEventCollector.CollectFrom(letter);
+
+        foreach (var document in letter.Documents)
+        {
+            domainEventCollector.CollectFrom(document);
+        }
     }
 
     public async Task<Letter?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var entity = await dbContext.Letters
             .Include(l => l.Tags)
+            .Include(l => l.Documents)
             .AsNoTracking()
             .FirstOrDefaultAsync(l => l.Id == id, cancellationToken);
 

@@ -1,4 +1,6 @@
-﻿namespace eLetter25.Domain.Shared.ValueObjects;
+﻿using eLetter25.Domain.Common;
+
+namespace eLetter25.Domain.Shared.ValueObjects;
 
 /// <summary>
 /// Represents a phone number.
@@ -11,7 +13,7 @@ public readonly record struct PhoneNumber
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            throw new ArgumentException("Phone number cannot be null or empty.", nameof(value));
+            throw new DomainValidationException("Phone number cannot be null or whitespace.");
         }
 
         Value = value;

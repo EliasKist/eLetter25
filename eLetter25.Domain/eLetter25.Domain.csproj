@@ -11,4 +11,13 @@
       <Folder Include="Shared\" />
     </ItemGroup>
 
+    <ItemGroup>
+      <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+        <_Parameter1>eLetter25.Infrastructure</_Parameter1>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+        <_Parameter1>eLetter25.Domain.Tests</_Parameter1>
+      </AssemblyAttribute>
+    </ItemGroup>
+
 </Project>

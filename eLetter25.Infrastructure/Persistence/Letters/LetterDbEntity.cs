@@ -75,4 +75,5 @@ public sealed class LetterDbEntity
     public string? RecipientPhone { get; set; }
 
     public ICollection<LetterTagDbEntity> Tags { get; set; } = [];
+    public ICollection<LetterDocumentDbEntity> Documents { get; set; } = [];
 }
