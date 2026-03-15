@@ -11,6 +11,8 @@ public class Letter : DomainEntity
 {
     public string Subject { get; private set; } = string.Empty;
 
+    public Guid OwnerId { get; private set; }
+
     public IReadOnlyCollection<Tag> Tags { get; private set; } = [];
 
     public DateTimeOffset SentDate { get; private set; }
@@ -34,6 +36,7 @@ public class Letter : DomainEntity
     /// Only <see cref="Events.LetterCreatedEvent"/> is raised; no intermediate change events are emitted.
     /// </summary>
     public static Letter Create(
+        Guid ownerId,
         Correspondent sender,
         Correspondent recipient,
         DateTimeOffset sentDate,
@@ -42,6 +45,11 @@ public class Letter : DomainEntity
     {
         ArgumentNullException.ThrowIfNull(sender);
         ArgumentNullException.ThrowIfNull(recipient);
+
+        if (ownerId == Guid.Empty)
+        {
+            throw new DomainValidationException("OwnerId must not be empty.");
+        }
 
         if (sentDate == default)
         {
@@ -58,6 +66,7 @@ public class Letter : DomainEntity
 
         var letter = new Letter
         {
+            OwnerId = ownerId,
             Sender = sender,
             Recipient = recipient,
             SentDate = sentDate,
@@ -82,6 +91,7 @@ public class Letter : DomainEntity
     /// </summary>
     public static Letter Reconstitute(
         Guid id,
+        Guid ownerId,
         Correspondent sender,
         Correspondent recipient,
         DateTimeOffset sentDate,
@@ -94,6 +104,7 @@ public class Letter : DomainEntity
         return new Letter
         {
             Id = id,
+            OwnerId = ownerId,
             Sender = sender,
             Recipient = recipient,
             SentDate = sentDate,

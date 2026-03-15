@@ -5,6 +5,7 @@ using MediatR;
 namespace eLetter25.Application.Letters.UseCases.CreateLetter;
 
 public sealed record CreateLetterCommand(
+    Guid OwnerId,
     CreateLetterRequest Request,
     Stream DocumentStream,
     DocumentFormat DocumentFormat,

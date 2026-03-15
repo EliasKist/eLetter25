@@ -13,7 +13,7 @@ namespace eLetter25.API.Controllers.Letters;
 [Route("api/letters")]
 [Produces("application/json")]
 [Authorize]
-public sealed class UploadDocumentController(IMediator mediator) : ControllerBase
+public sealed class UploadDocumentController(IMediator mediator) : ApiControllerBase
 {
     private static readonly Dictionary<string, DocumentFormat> SupportedContentTypes =
         new(StringComparer.OrdinalIgnoreCase)
@@ -60,11 +60,15 @@ public sealed class UploadDocumentController(IMediator mediator) : ControllerBas
         }
 
         await using var stream = document.OpenReadStream();
-        var command = new UploadDocumentCommand(letterId, format, stream);
+        if (!TryGetOwnerId(out var ownerId))
+        {
+            return Unauthorized();
+        }
+
+        var command = new UploadDocumentCommand(ownerId, letterId, format, stream);
 
         var result = await mediator.Send(command, cancellationToken);
 
         return Created($"/api/letters/{result.LetterId}/documents/{result.DocumentId}", result);
     }
 }
-

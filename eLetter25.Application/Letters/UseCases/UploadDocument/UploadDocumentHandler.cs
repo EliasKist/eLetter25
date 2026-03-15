@@ -30,11 +30,13 @@ public sealed class UploadDocumentHandler(
         var letter = await letterRepository.GetByIdAsync(command.LetterId, cancellationToken)
                      ?? throw new LetterNotFoundException(command.LetterId);
 
-        // CreateDocument transitions the document into Registered status and raises
-        // LetterDocumentStatusChangedEvent(null → Registered) – the "DocumentRegistered" event.
+        if (letter.OwnerId != command.OwnerId)
+        {
+            throw new LetterNotFoundException(command.LetterId);
+        }
+
         var document = letter.CreateDocument(command.DocumentFormat);
 
-        // Non-seekable streams cannot be rewound, so buffer them upfront before storage.
         await using MemoryStream? bufferedStream = command.DocumentStream.CanSeek
             ? null
             : await BufferStreamAsync(command.DocumentStream, cancellationToken);
@@ -76,4 +78,3 @@ public sealed class UploadDocumentHandler(
         return buffer;
     }
 }
-

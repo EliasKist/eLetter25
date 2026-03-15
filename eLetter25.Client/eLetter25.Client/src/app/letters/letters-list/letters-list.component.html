@@ -1,0 +1,76 @@
+﻿<div class="page">
+
+  <div class="page-header letters-list__header">
+    <div>
+      <h1 class="page-title">Briefübersicht</h1>
+      <p class="page-subtitle">Alle erfassten Briefe deines Kontos.</p>
+    </div>
+    <a class="btn btn--primary" routerLink="/letters/create">
+      <span>＋</span> Neuer Brief
+    </a>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="alert alert--error" role="alert">
+      <span class="alert__icon">✕</span>
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if (isLoading()) {
+    <div class="letters-list__loading">
+      <span class="letters-list__spinner"></span>
+      <span>Briefe werden geladen …</span>
+    </div>
+  } @else if (letters().length === 0) {
+    <div class="placeholder-card">
+      <div class="letters-list__empty-icon">✉</div>
+      <p class="letters-list__empty-title">Noch keine Briefe vorhanden</p>
+      <p class="letters-list__empty-hint">Lege deinen ersten Brief an, um hier loszulegen.</p>
+      <a class="btn btn--primary letters-list__empty-cta" routerLink="/letters/create">
+        Ersten Brief anlegen
+      </a>
+    </div>
+  } @else {
+    <div class="card letters-table-wrap">
+      <table class="letters-table">
+        <thead>
+          <tr>
+            <th>Betreff</th>
+            <th>Absender</th>
+            <th>Empfänger</th>
+            <th>Datum</th>
+            <th>Tags</th>
+            <th>Erfasst</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (letter of letters(); track letter.id) {
+            <tr class="letters-table__row">
+              <td class="letters-table__subject">{{ letter.subject }}</td>
+              <td>{{ letter.senderName }}</td>
+              <td>{{ letter.recipientName }}</td>
+              <td class="letters-table__date">{{ letter.sentDate | date:'dd.MM.yyyy' }}</td>
+              <td>
+                @if (letter.tags.length > 0) {
+                  <div class="letters-table__tags">
+                    @for (tag of letter.tags; track tag) {
+                      <span class="tag">{{ tag }}</span>
+                    }
+                  </div>
+                } @else {
+                  <span class="letters-table__no-tags">–</span>
+                }
+              </td>
+              <td class="letters-table__date letters-table__created">
+                {{ letter.createdDate | date:'dd.MM.yyyy' }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+</div>
+

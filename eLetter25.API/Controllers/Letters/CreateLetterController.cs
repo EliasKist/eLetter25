@@ -26,7 +26,7 @@ public sealed class CreateLetterFormInput
 [Route("api/letters")]
 [Produces("application/json")]
 [Authorize]
-public sealed class CreateLetterController(IMediator mediator) : ControllerBase
+public sealed class CreateLetterController(IMediator mediator) : ApiControllerBase
 {
     private static readonly Dictionary<string, DocumentFormat> SupportedContentTypes =
         new(StringComparer.OrdinalIgnoreCase)
@@ -81,8 +81,13 @@ public sealed class CreateLetterController(IMediator mediator) : ControllerBase
             return BadRequest(new { error = "Metadata must not be null." });
         }
 
+        if (!TryGetOwnerId(out var ownerId))
+        {
+            return Unauthorized();
+        }
+
         await using var stream = input.Document.OpenReadStream();
-        var command = new CreateLetterCommand(request, stream, format, input.Document.Length);
+        var command = new CreateLetterCommand(ownerId, request, stream, format, input.Document.Length);
 
         var result = await mediator.Send(command, cancellationToken);
         return Created($"/api/letters/{result.LetterId}", result);

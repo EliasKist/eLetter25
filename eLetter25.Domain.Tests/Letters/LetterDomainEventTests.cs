@@ -1,4 +1,4 @@
-﻿using eLetter25.Domain.Letters;
+using eLetter25.Domain.Letters;
 using eLetter25.Domain.Letters.Events;
 using eLetter25.Domain.Letters.ValueObjects;
 using eLetter25.Domain.Shared.ValueObjects;
@@ -9,6 +9,7 @@ namespace eLetter25.Domain.Tests.Letters;
 
 public sealed class LetterDomainEventTests
 {
+    private static readonly Guid TestOwnerId = Guid.NewGuid();
     [Fact]
     public void Create_ShouldRaiseExactlyOneLetterCreatedEvent()
     {
@@ -16,7 +17,7 @@ public sealed class LetterDomainEventTests
         var recipient = CreateCorrespondent("Recipient");
         var tags = new[] { new Tag("Invoice"), new Tag("Urgent") };
 
-        var letter = Letter.Create(sender, recipient, DateTimeOffset.UtcNow, "Test Subject", tags);
+        var letter = Letter.Create(TestOwnerId, sender, recipient, DateTimeOffset.UtcNow, "Test Subject", tags);
 
         var createdEvent = letter.DomainEvents
             .Should().ContainSingle("only LetterCreatedEvent must be raised during initial creation")
@@ -34,7 +35,7 @@ public sealed class LetterDomainEventTests
     [Fact]
     public void Create_WithoutTags_ShouldRaiseLetterCreatedEventWithEmptyTags()
     {
-        var letter = Letter.Create(CreateCorrespondent("Sender"), CreateCorrespondent("Recipient"), DateTimeOffset.UtcNow, "No Tags");
+        var letter = Letter.Create(TestOwnerId, CreateCorrespondent("Sender"), CreateCorrespondent("Recipient"), DateTimeOffset.UtcNow, "No Tags");
 
         var createdEvent = letter.DomainEvents
             .Should().ContainSingle()
@@ -46,7 +47,7 @@ public sealed class LetterDomainEventTests
     [Fact]
     public void SetSubject_AfterCreation_ShouldRaiseLetterSubjectChangedEvent()
     {
-        var letter = Letter.Create(CreateCorrespondent("Sender"), CreateCorrespondent("Recipient"), DateTimeOffset.UtcNow, "Original Subject");
+        var letter = Letter.Create(TestOwnerId, CreateCorrespondent("Sender"), CreateCorrespondent("Recipient"), DateTimeOffset.UtcNow, "Original Subject");
         letter.ClearDomainEvents();
 
         letter.SetSubject("Updated Subject");
@@ -63,7 +64,7 @@ public sealed class LetterDomainEventTests
     [Fact]
     public void SetSubject_WithSameValue_ShouldNotRaiseEvent()
     {
-        var letter = Letter.Create(CreateCorrespondent("Sender"), CreateCorrespondent("Recipient"), DateTimeOffset.UtcNow, "Same Subject");
+        var letter = Letter.Create(TestOwnerId, CreateCorrespondent("Sender"), CreateCorrespondent("Recipient"), DateTimeOffset.UtcNow, "Same Subject");
         letter.ClearDomainEvents();
 
         letter.SetSubject("Same Subject");
@@ -74,7 +75,7 @@ public sealed class LetterDomainEventTests
     [Fact]
     public void AddTag_AfterCreation_ShouldRaiseEventOnceAndPreventDuplicates()
     {
-        var letter = Letter.Create(CreateCorrespondent("Sender"), CreateCorrespondent("Recipient"), DateTimeOffset.UtcNow, "Subject");
+        var letter = Letter.Create(TestOwnerId, CreateCorrespondent("Sender"), CreateCorrespondent("Recipient"), DateTimeOffset.UtcNow, "Subject");
         letter.ClearDomainEvents();
 
         var tag = new Tag("Urgent");
@@ -98,3 +99,5 @@ public sealed class LetterDomainEventTests
             new Address("Main Street", "12345", "Berlin", "DE"));
     }
 }
+
+

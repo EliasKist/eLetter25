@@ -9,6 +9,7 @@ namespace eLetter25.Application.Letters.UseCases.UploadDocument;
 /// The resulting <see cref="LetterDocument"/> is created in <see cref="DocumentStatus.Registered"/> status.
 /// </summary>
 public sealed record UploadDocumentCommand(
+    Guid OwnerId,
     Guid LetterId,
     DocumentFormat DocumentFormat,
     Stream DocumentStream) : IRequest<UploadDocumentResult>;

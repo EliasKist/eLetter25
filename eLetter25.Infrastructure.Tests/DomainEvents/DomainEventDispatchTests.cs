@@ -27,7 +27,7 @@ public sealed class DomainEventDispatchTests
             collector);
         var unitOfWork = new EfUnitOfWork(dbContext, collector, dispatcher);
 
-        var letter = Letter.Create(CreateCorrespondent("Sender"), CreateCorrespondent("Recipient"), DateTimeOffset.UtcNow, "Dispatch Test Subject");
+        var letter = Letter.Create(Guid.NewGuid(), CreateCorrespondent("Sender"), CreateCorrespondent("Recipient"), DateTimeOffset.UtcNow, "Dispatch Test Subject");
 
         await repository.AddAsync(letter);
         await unitOfWork.CommitAsync();
@@ -49,7 +49,7 @@ public sealed class DomainEventDispatchTests
             collector);
         var unitOfWork = new EfUnitOfWork(dbContext, collector, dispatcher);
 
-        var letter = Letter.Create(CreateCorrespondent("Sender"), CreateCorrespondent("Recipient"), DateTimeOffset.UtcNow, "Failure Test Subject");
+        var letter = Letter.Create(Guid.NewGuid(), CreateCorrespondent("Sender"), CreateCorrespondent("Recipient"), DateTimeOffset.UtcNow, "Failure Test Subject");
         await repository.AddAsync(letter);
 
         var action = () => unitOfWork.CommitAsync();
