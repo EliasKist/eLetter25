@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<ILetterDomainToDbMapper, LetterDomainToDbMapper>();
         services.AddScoped<ILetterDbToDomainMapper, LetterDbToDomainMapper>();
         services.AddScoped<ILetterRepository, EfLetterRepository>();
+        services.AddScoped<IDocumentRepository, EfDocumentRepository>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
         services.AddScoped<IDomainEventCollector, DomainEventCollector>();
