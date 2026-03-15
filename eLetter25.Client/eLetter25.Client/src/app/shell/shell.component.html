@@ -11,10 +11,10 @@
       </a>
 
       <div class="sidebar__section">Briefe</div>
-      <a class="nav-link" routerLink="/letters/create" routerLinkActive="active">
+      <a class="nav-link" routerLink="/letters/create" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
         <span class="nav-link__icon">＋</span> Neuer Brief
       </a>
-      <a class="nav-link" routerLink="/letters" routerLinkActive="active">
+      <a class="nav-link" routerLink="/letters" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
         <span class="nav-link__icon">☰</span> Übersicht
       </a>
 

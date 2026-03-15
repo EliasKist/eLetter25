@@ -32,6 +32,7 @@ public sealed class LetterDbToDomainMapper : ILetterDbToDomainMapper
 
         var letter = Letter.Reconstitute(
             entity.Id,
+            entity.OwnerId,
             sender,
             recipient,
             entity.SentDate,

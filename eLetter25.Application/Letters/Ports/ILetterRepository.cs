@@ -16,6 +16,12 @@ public interface ILetterRepository
     Task AddAsync(Letter letter, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves all letters belonging to the specified owner, ordered by creation date descending.
+    /// Documents are not loaded – use <see cref="GetByIdAsync"/> when document details are needed.
+    /// </summary>
+    Task<IReadOnlyList<Letter>> GetByOwnerAsync(Guid ownerId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves a letter by its unique identifier.
     /// </summary>
     /// <param name="id"></param>

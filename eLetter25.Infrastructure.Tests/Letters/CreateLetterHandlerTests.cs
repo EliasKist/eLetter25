@@ -104,7 +104,7 @@ public sealed class CreateLetterHandlerTests
             Recipient: correspondent,
             Tags: []);
 
-        return new CreateLetterCommand(request, documentStream, DocumentFormat.Pdf, reportedSize);
+        return new CreateLetterCommand(Guid.NewGuid(), request, documentStream, DocumentFormat.Pdf, reportedSize);
     }
 
     // ── Fakes ─────────────────────────────────────────────────────────────────
@@ -119,6 +119,9 @@ public sealed class CreateLetterHandlerTests
             return Task.CompletedTask;
         }
 
+        public Task<IReadOnlyList<Letter>> GetByOwnerAsync(Guid ownerId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<Letter>>([]);
+
         public Task<Letter?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
             => Task.FromResult<Letter?>(null);
     }
@@ -127,6 +130,9 @@ public sealed class CreateLetterHandlerTests
     {
         public Task AddAsync(Letter letter, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
+
+        public Task<IReadOnlyList<Letter>> GetByOwnerAsync(Guid ownerId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<Letter>>([]);
 
         public Task<Letter?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
             => Task.FromResult<Letter?>(null);

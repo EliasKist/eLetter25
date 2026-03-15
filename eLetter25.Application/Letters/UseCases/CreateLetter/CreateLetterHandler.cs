@@ -30,7 +30,7 @@ public sealed class CreateLetterHandler(
         var recipient = MapToDomain(request.Recipient);
         var initialTags = request.Tags.Select(tagName => new Tag(tagName));
 
-        var letter = Letter.Create(sender, recipient, request.SentDate, request.Subject, initialTags);
+        var letter = Letter.Create(command.OwnerId, sender, recipient, request.SentDate, request.Subject, initialTags);
 
         var (contentHash, sizeInBytes) = await ComputeHashAndSizeAsync(
             documentStream, command.DocumentSizeInBytes, cancellationToken);

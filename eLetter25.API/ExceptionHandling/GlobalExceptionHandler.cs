@@ -96,6 +96,7 @@ internal sealed class GlobalExceptionHandler(
         {
             DomainValidationException => (StatusCodes.Status400BadRequest, "Domain Validation Error"),
             ArgumentException => (StatusCodes.Status400BadRequest, "Invalid Request"),
+            NotFoundException => (StatusCodes.Status404NotFound, "Resource Not Found"),
             ExceptionBase => (StatusCodes.Status422UnprocessableEntity, "Business Rule Violation"),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred")
         };

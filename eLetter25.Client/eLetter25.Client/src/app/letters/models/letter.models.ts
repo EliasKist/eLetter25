@@ -25,3 +25,17 @@ export interface CreateLetterResult {
   documentId: string;
 }
 
+export interface LetterSummary {
+  id: string;
+  subject: string;
+  sentDate: string;
+  createdDate: string;
+  senderName: string;
+  recipientName: string;
+  tags: string[];
+}
+
+export interface GetLettersResult {
+  letters: LetterSummary[];
+}
+

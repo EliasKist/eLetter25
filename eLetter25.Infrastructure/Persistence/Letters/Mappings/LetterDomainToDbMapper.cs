@@ -22,6 +22,7 @@ public sealed class LetterDomainToDbMapper : ILetterDomainToDbMapper
         var entity = new LetterDbEntity
         {
             Id = letter.Id,
+            OwnerId = letter.OwnerId,
             Subject = letter.Subject,
             SentDate = letter.SentDate,
             CreatedDate = letter.CreatedDate,

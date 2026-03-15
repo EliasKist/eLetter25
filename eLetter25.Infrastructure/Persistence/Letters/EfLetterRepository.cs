@@ -24,6 +24,20 @@ public sealed class EfLetterRepository(
         }
     }
 
+    public async Task<IReadOnlyList<Letter>> GetByOwnerAsync(
+        Guid ownerId,
+        CancellationToken cancellationToken = default)
+    {
+        var entities = await dbContext.Letters
+            .Include(l => l.Tags)
+            .Where(l => l.OwnerId == ownerId)
+            .OrderByDescending(l => l.CreatedDate)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        return entities.Select(dbToDomainMapper.MapToDomain).ToList();
+    }
+
     public async Task<Letter?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var entity = await dbContext.Letters
