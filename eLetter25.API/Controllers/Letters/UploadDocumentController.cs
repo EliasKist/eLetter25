@@ -1,5 +1,4 @@
 ﻿using eLetter25.Application.Letters.UseCases.UploadDocument;
-using eLetter25.Domain.Letters;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,14 +14,6 @@ namespace eLetter25.API.Controllers.Letters;
 [Authorize]
 public sealed class UploadDocumentController(IMediator mediator) : ApiControllerBase
 {
-    private static readonly Dictionary<string, DocumentFormat> SupportedContentTypes =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["application/pdf"] = DocumentFormat.Pdf,
-            ["image/png"] = DocumentFormat.Png,
-            ["image/jpeg"] = DocumentFormat.Jpeg
-        };
-
     /// <summary>
     /// Uploads a document file and registers it against the specified letter.
     /// The document is created in <c>Registered</c> status.
@@ -51,11 +42,11 @@ public sealed class UploadDocumentController(IMediator mediator) : ApiController
             return BadRequest(new { error = "A document file is required." });
         }
 
-        if (!SupportedContentTypes.TryGetValue(document.ContentType, out var format))
+        if (!DocumentFormatResolver.TryResolve(document.ContentType, out var format))
         {
             return BadRequest(new
             {
-                error = $"Unsupported document type '{document.ContentType}'. Allowed: PDF, PNG, JPEG."
+                error = $"Unsupported document type '{document.ContentType}'. Allowed: {DocumentFormatResolver.AcceptedTypes}."
             });
         }
 

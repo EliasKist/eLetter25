@@ -1,7 +1,6 @@
 ﻿using System.Text.Json;
 using eLetter25.Application.Letters.Contracts;
 using eLetter25.Application.Letters.UseCases.CreateLetter;
-using eLetter25.Domain.Letters;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -28,14 +27,6 @@ public sealed class CreateLetterFormInput
 [Authorize]
 public sealed class CreateLetterController(IMediator mediator) : ApiControllerBase
 {
-    private static readonly Dictionary<string, DocumentFormat> SupportedContentTypes =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["application/pdf"] = DocumentFormat.Pdf,
-            ["image/png"] = DocumentFormat.Png,
-            ["image/jpeg"] = DocumentFormat.Jpeg
-        };
-
     /// <summary>Creates a new letter together with its physical document.</summary>
     /// <response code="201">Letter and document successfully created.</response>
     /// <response code="400">Invalid metadata or unsupported document format.</response>
@@ -55,11 +46,11 @@ public sealed class CreateLetterController(IMediator mediator) : ApiControllerBa
             return BadRequest(new { error = "A document file is required." });
         }
 
-        if (!SupportedContentTypes.TryGetValue(input.Document.ContentType, out var format))
+        if (!DocumentFormatResolver.TryResolve(input.Document.ContentType, out var format))
         {
             return BadRequest(new
             {
-                error = $"Unsupported document type '{input.Document.ContentType}'. Allowed: PDF, PNG, JPEG."
+                error = $"Unsupported document type '{input.Document.ContentType}'. Allowed: {DocumentFormatResolver.AcceptedTypes}."
             });
         }
 
