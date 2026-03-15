@@ -29,7 +29,16 @@ public class Letter : DomainEntity
     {
     } // For EF Core
 
-    public static Letter Create(Correspondent sender, Correspondent recipient, DateTimeOffset sentDate)
+    /// <summary>
+    /// Creates a new <see cref="Letter"/> with all initial data in a single atomic step.
+    /// Only <see cref="Events.LetterCreatedEvent"/> is raised; no intermediate change events are emitted.
+    /// </summary>
+    public static Letter Create(
+        Correspondent sender,
+        Correspondent recipient,
+        DateTimeOffset sentDate,
+        string subject,
+        IEnumerable<Tag>? initialTags = null)
     {
         ArgumentNullException.ThrowIfNull(sender);
         ArgumentNullException.ThrowIfNull(recipient);
@@ -39,15 +48,61 @@ public class Letter : DomainEntity
             throw new DomainValidationException("Sent date must be a valid date.");
         }
 
+        if (string.IsNullOrWhiteSpace(subject))
+        {
+            throw new DomainValidationException("Subject cannot be null or whitespace.");
+        }
+
+        var tags = initialTags?.Distinct().ToList() ?? [];
+        var normalizedSubject = subject.Trim();
+
         var letter = new Letter
         {
             Sender = sender,
             Recipient = recipient,
             SentDate = sentDate,
             CreatedDate = DateTimeOffset.UtcNow,
+            Subject = normalizedSubject,
+            Tags = tags,
         };
-        letter.Raise(new LetterCreatedEvent(letter.Id, letter.SentDate, letter.CreatedDate));
+
+        letter.Raise(new LetterCreatedEvent(
+            letter.Id,
+            letter.SentDate,
+            letter.CreatedDate,
+            letter.Subject,
+            tags.Select(t => t.Value).ToArray()));
+
         return letter;
+    }
+
+    /// <summary>
+    /// Reconstitutes a <see cref="Letter"/> from a persisted snapshot without raising domain events.
+    /// Must only be called by the persistence mapper.
+    /// </summary>
+    public static Letter Reconstitute(
+        Guid id,
+        Correspondent sender,
+        Correspondent recipient,
+        DateTimeOffset sentDate,
+        DateTimeOffset createdDate,
+        string subject,
+        IEnumerable<Tag> tags,
+        Guid? senderReferenceId,
+        Guid? recipientReferenceId)
+    {
+        return new Letter
+        {
+            Id = id,
+            Sender = sender,
+            Recipient = recipient,
+            SentDate = sentDate,
+            CreatedDate = createdDate,
+            Subject = subject,
+            Tags = tags.ToList(),
+            SenderReferenceId = senderReferenceId,
+            RecipientReferenceId = recipientReferenceId,
+        };
     }
 
     public Letter SetSubject(string subject)

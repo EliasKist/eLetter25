@@ -1,61 +1,112 @@
-﻿import { Component, inject } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { CommonModule } from '@angular/common';
-import { LetterService } from '../services/letter.service';
-import { CreateLetterRequest } from '../models/letter.models';
-import { formGetErrorMessage, formHasError } from '../../core/utils/form-validation.utils';
+﻿import {Component, DestroyRef, inject, signal} from '@angular/core';
+import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
+import {CommonModule} from '@angular/common';
+import {NgxExtendedPdfViewerModule} from 'ngx-extended-pdf-viewer';
+import {LetterService} from '../services/letter.service';
+import {CreateLetterRequest} from '../models/letter.models';
+import {formGetErrorMessage, formHasError} from '../../core/utils/form-validation.utils';
+
+type PreviewType = 'pdf' | 'image' | null;
+
+const ACCEPTED_TYPES: Record<string, PreviewType> = {
+  'application/pdf': 'pdf',
+  'image/png': 'image',
+  'image/jpeg': 'image'
+};
 
 @Component({
   selector: 'app-create-letter',
   standalone: true,
-  imports: [ReactiveFormsModule, CommonModule],
+  imports: [ReactiveFormsModule, CommonModule, NgxExtendedPdfViewerModule],
   templateUrl: './create-letter.component.html',
   styleUrl: './create-letter.component.scss'
 })
 export class CreateLetterComponent {
   private readonly fb = inject(FormBuilder);
   private readonly letterService = inject(LetterService);
-
-  private buildAddressGroup() {
-    return this.fb.group({
-      street: ['', Validators.required],
-      postalCode: ['', Validators.required],
-      city: ['', Validators.required],
-      country: ['', Validators.required]
-    });
-  }
-
-  private buildCorrespondentGroup() {
-    return this.fb.group({
-      name: ['', Validators.required],
-      address: this.buildAddressGroup(),
-      email: ['', Validators.email],
-      phone: ['']
-    });
-  }
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly form = this.fb.group({
     subject: ['', [Validators.required, Validators.maxLength(200)]],
     sentDate: ['', Validators.required],
-    sender: this.buildCorrespondentGroup(),
-    recipient: this.buildCorrespondentGroup(),
+    sender: this.fb.group({
+      name: ['', Validators.required],
+      address: this.fb.group({
+        street: ['', Validators.required],
+        postalCode: ['', Validators.required],
+        city: ['', Validators.required],
+        country: ['', Validators.required]
+      }),
+      email: ['', Validators.email],
+      phone: ['']
+    }),
+    recipient: this.fb.group({
+      name: ['', Validators.required],
+      address: this.fb.group({
+        street: ['', Validators.required],
+        postalCode: ['', Validators.required],
+        city: ['', Validators.required],
+        country: ['', Validators.required]
+      }),
+      email: ['', Validators.email],
+      phone: ['']
+    }),
     tags: ['']
   });
 
-  protected isSubmitting = false;
-  protected successLetterId: string | null = null;
-  protected errorMessage: string | null = null;
+  protected selectedFile = signal<File | null>(null);
+  protected previewUrl = signal<string | null>(null);
+  protected previewType = signal<PreviewType>(null);
+  protected isSubmitting = signal(false);
+  protected successLetterId = signal<string | null>(null);
+  protected errorMessage = signal<string | null>(null);
+  protected fileError = signal<string | null>(null);
 
+  private rawObjectUrl: string | null = null;
+
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      if (this.rawObjectUrl) {
+        URL.revokeObjectURL(this.rawObjectUrl);
+      }
+    });
+  }
+
+  protected onFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    this.setFile(file);
+    input.value = '';
+  }
+
+  protected onDrop(event: DragEvent): void {
+    event.preventDefault();
+    const file = event.dataTransfer?.files?.[0] ?? null;
+    this.setFile(file);
+  }
+
+  protected onDragOver(event: DragEvent): void {
+    event.preventDefault();
+  }
+
+  protected clearFile(): void {
+    this.setFile(null);
+  }
 
   protected submit(): void {
-    if (this.form.invalid || this.isSubmitting) {
+    if (!this.selectedFile()) {
+      this.fileError.set('Please select a document before submitting.');
+      return;
+    }
+
+    if (this.form.invalid || this.isSubmitting()) {
       this.form.markAllAsTouched();
       return;
     }
 
-    this.isSubmitting = true;
-    this.errorMessage = null;
-    this.successLetterId = null;
+    this.isSubmitting.set(true);
+    this.errorMessage.set(null);
+    this.successLetterId.set(null);
 
     const raw = this.form.getRawValue();
     const request: CreateLetterRequest = {
@@ -88,23 +139,54 @@ export class CreateLetterComponent {
         : []
     };
 
-    this.letterService.createLetter(request).subscribe({
+    this.letterService.createLetter(request, this.selectedFile()!).subscribe({
       next: result => {
-        this.successLetterId = result.letterId;
-        this.isSubmitting = false;
+        this.successLetterId.set(result.letterId);
+        this.isSubmitting.set(false);
         this.form.reset();
+        this.clearFile();
       },
       error: err => {
-        this.errorMessage = err.status === 401
-          ? 'Unauthorized. Please log in first.'
-          : 'An error occurred while creating the letter. Please try again.';
-        this.isSubmitting = false;
+        const status = err.status as number;
+        this.errorMessage.set(
+          status === 401
+            ? 'Unauthorized. Please log in first.'
+            : status === 400
+              ? (err.error?.error ?? 'Invalid request. Please check all fields.')
+              : 'An unexpected error occurred. Please try again.'
+        );
+        this.isSubmitting.set(false);
       }
     });
   }
 
   protected hasError = (path: string) => formHasError(this.form, path);
   protected getErrorMessage = (path: string) => formGetErrorMessage(this.form, path);
+
+  private setFile(file: File | null): void {
+    if (this.rawObjectUrl) {
+      URL.revokeObjectURL(this.rawObjectUrl);
+      this.rawObjectUrl = null;
+    }
+
+    this.fileError.set(null);
+
+    if (!file) {
+      this.selectedFile.set(null);
+      this.previewUrl.set(null);
+      this.previewType.set(null);
+      return;
+    }
+
+    const type = ACCEPTED_TYPES[file.type];
+    if (!type) {
+      this.fileError.set('Unsupported file type. Please upload a PDF, PNG, or JPEG.');
+      return;
+    }
+
+    this.rawObjectUrl = URL.createObjectURL(file);
+    this.selectedFile.set(file);
+    this.previewType.set(type);
+    this.previewUrl.set(this.rawObjectUrl);
+  }
 }
-
-

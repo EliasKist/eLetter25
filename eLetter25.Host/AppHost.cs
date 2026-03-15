@@ -10,6 +10,7 @@ var usersDb = builder.AddPostgres("Identity")
 
 var persistence = builder.AddPostgres("Persistence")
     .WithHostPort(5583)
+    .WithPgAdmin()
     .WithDataVolume()
     .WithLifetime(ContainerLifetime.Persistent);
 

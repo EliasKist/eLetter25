@@ -23,6 +23,8 @@ public sealed class LetterCreatedAuditHandler(IAuditWriter auditWriter)
             {
                 ["SentDate"] = domainEvent.SentDate.ToString("O"),
                 ["CreatedDate"] = domainEvent.CreatedDate.ToString("O"),
+                ["Subject"] = domainEvent.Subject,
+                ["Tags"] = string.Join(", ", domainEvent.InitialTags),
             });
 
         return auditWriter.WriteAsync(entry, cancellationToken);

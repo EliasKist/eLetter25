@@ -1,88 +1,125 @@
-﻿using eLetter25.Application.Common.Options;
+﻿using System.Runtime.ExceptionServices;
+using eLetter25.Application.Common.Options;
 using eLetter25.Application.Common.Ports;
+using eLetter25.Domain.Letters;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace eLetter25.Infrastructure.DocumentStorage;
 
 public sealed class LocalFileSystemDocumentStorage(
     IOptions<DocumentStorageOptions> options,
-    IWebHostEnvironment hostEnvironment) : IDocumentStorage
+    IWebHostEnvironment hostEnvironment,
+    ILogger<LocalFileSystemDocumentStorage> logger) : IDocumentStorage
 {
     private readonly DocumentStorageOptions _options = options.Value;
-    private readonly IWebHostEnvironment _hostEnvironment = hostEnvironment;
+
+    private static readonly IReadOnlyDictionary<DocumentFormat, string> Extensions =
+        new Dictionary<DocumentFormat, string>
+        {
+            [DocumentFormat.Pdf] = "pdf",
+            [DocumentFormat.Png] = "png",
+            [DocumentFormat.Jpeg] = "jpg"
+        };
 
     /// <inheritdoc />
-    public async Task StorePdfAsync(Guid documentId, Stream pdfContent, CancellationToken cancellationToken = default)
+    public async Task StoreAsync(Guid documentId, DocumentFormat format, Stream content,
+        CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(pdfContent);
+        ArgumentNullException.ThrowIfNull(content);
 
         if (documentId == Guid.Empty)
         {
             throw new ArgumentException("DocumentId must not be empty.", nameof(documentId));
         }
 
-        if (string.IsNullOrWhiteSpace(_options.BasePath))
-        {
-            throw new InvalidOperationException("DocumentStorage:BasePath is not configured.");
-        }
-
         var resolvedBasePath = ResolveAndValidateBasePath(_options.BasePath);
-
         Directory.CreateDirectory(resolvedBasePath);
 
-        var destinationPath = Path.Combine(resolvedBasePath, $"{documentId:D}.pdf");
-        var tempPath = Path.Combine(resolvedBasePath, $"{documentId:D}.pdf.tmp");
+        var extension = Extensions[format];
+        var destination = Path.Combine(resolvedBasePath, $"{documentId:D}.{extension}");
+        var temp = destination + ".tmp";
 
-        await using (var targetStream = new FileStream(
-                         tempPath,
-                         FileMode.Create,
-                         FileAccess.Write,
-                         FileShare.None,
-                         bufferSize: 81920,
-                         options: FileOptions.Asynchronous | FileOptions.SequentialScan))
+        await using (var target = new FileStream(
+                         temp, FileMode.Create, FileAccess.Write, FileShare.None,
+                         bufferSize: 81920, options: FileOptions.Asynchronous | FileOptions.SequentialScan))
         {
-            if (pdfContent.CanSeek)
+            if (content.CanSeek)
             {
-                pdfContent.Seek(0, SeekOrigin.Begin);
+                content.Seek(0, SeekOrigin.Begin);
             }
 
-            await pdfContent.CopyToAsync(targetStream, cancellationToken);
-            await targetStream.FlushAsync(cancellationToken);
+            await content.CopyToAsync(target, cancellationToken);
+            await target.FlushAsync(cancellationToken);
         }
 
         try
         {
-            File.Move(tempPath, destinationPath, overwrite: true);
+            File.Move(temp, destination, overwrite: true);
         }
-        catch
+        catch (Exception moveException)
         {
             try
             {
-                if (File.Exists(tempPath))
+                if (File.Exists(temp))
                 {
-                    File.Delete(tempPath);
+                    File.Delete(temp);
                 }
             }
             catch (Exception cleanupException)
             {
-                throw new InvalidOperationException(
-                    "Failed to move stored document to destination path and cleanup of temporary file also failed.",
-                    cleanupException);
+                logger.LogError(
+                    cleanupException,
+                    "Failed to delete temporary file '{TempPath}' during cleanup after move failure. Manual cleanup may be required.",
+                    temp);
             }
 
+            ExceptionDispatchInfo.Capture(moveException).Throw();
             throw;
         }
     }
 
+    /// <inheritdoc />
+    public Task DeleteAsync(Guid documentId, DocumentFormat format, CancellationToken cancellationToken = default)
+    {
+        if (documentId == Guid.Empty)
+        {
+            return Task.CompletedTask;
+        }
+
+        try
+        {
+            var basePath = ResolveAndValidateBasePath(_options.BasePath);
+            var extension = Extensions[format];
+            var path = Path.Combine(basePath, $"{documentId:D}.{extension}");
+
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+        catch (IOException)
+        {
+            // Best-effort cleanup – caller must not rely on this succeeding
+        }
+
+        return Task.CompletedTask;
+    }
+
     private string ResolveAndValidateBasePath(string basePath)
     {
+        if (string.IsNullOrWhiteSpace(basePath))
+        {
+            throw new InvalidOperationException("DocumentStorage:BasePath is not configured.");
+        }
+
         if (Path.IsPathRooted(basePath))
         {
             return basePath;
         }
 
-        var contentRoot = Path.GetFullPath(_hostEnvironment.ContentRootPath)
+        var contentRoot = Path.GetFullPath(hostEnvironment.ContentRootPath)
                               .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                           + Path.DirectorySeparatorChar;
 

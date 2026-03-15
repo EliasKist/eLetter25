@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace eLetter25.Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial_Postgres : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -47,6 +47,30 @@ namespace eLetter25.Infrastructure.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "LetterDocuments",
+                schema: "eletter25",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    LetterId = table.Column<Guid>(type: "uuid", nullable: false),
+                    DocumentFormat = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    Status = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
+                    ContentHash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    SizeInBytes = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_LetterDocuments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_LetterDocuments_Letters_LetterId",
+                        column: x => x.LetterId,
+                        principalSchema: "eletter25",
+                        principalTable: "Letters",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "LetterTags",
                 schema: "eletter25",
                 columns: table => new
@@ -69,6 +93,12 @@ namespace eLetter25.Infrastructure.Persistence.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_LetterDocuments_LetterId",
+                schema: "eletter25",
+                table: "LetterDocuments",
+                column: "LetterId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_LetterTags_LetterId",
                 schema: "eletter25",
                 table: "LetterTags",
@@ -78,6 +108,10 @@ namespace eLetter25.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "LetterDocuments",
+                schema: "eletter25");
+
             migrationBuilder.DropTable(
                 name: "LetterTags",
                 schema: "eletter25");

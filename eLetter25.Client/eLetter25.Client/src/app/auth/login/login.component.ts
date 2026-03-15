@@ -38,7 +38,7 @@ export class LoginComponent {
     const { email, password } = this.form.getRawValue();
 
     this.authService.login({ email: email ?? '', password: password ?? '' }).subscribe({
-      next: () => this.router.navigate(['/letters/create']),
+      next: () => this.router.navigate(['/dashboard']),
       error: (err: HttpErrorResponse) => {
         this.errorMessage = this.extractErrorMessage(err);
         this.isSubmitting = false;

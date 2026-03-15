@@ -12,8 +12,8 @@ using eLetter25.Infrastructure.Persistence;
 namespace eLetter25.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260314175509_LetterDocument")]
-    partial class LetterDocument
+    [Migration("20260314235515_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

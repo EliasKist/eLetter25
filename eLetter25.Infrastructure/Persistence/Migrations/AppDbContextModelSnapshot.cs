@@ -8,7 +8,7 @@ using eLetter25.Infrastructure.Persistence;
 
 #nullable disable
 
-namespace eLetter25.Infrastructure.Migrations
+namespace eLetter25.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     partial class AppDbContextModelSnapshot : ModelSnapshot
