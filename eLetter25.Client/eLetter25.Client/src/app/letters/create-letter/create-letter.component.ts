@@ -180,6 +180,9 @@ export class CreateLetterComponent {
 
     const type = ACCEPTED_TYPES[file.type];
     if (!type) {
+      this.selectedFile.set(null);
+      this.previewUrl.set(null);
+      this.previewType.set(null);
       this.fileError.set('Unsupported file type. Please upload a PDF, PNG, or JPEG.');
       return;
     }

@@ -99,9 +99,13 @@ public sealed class LocalFileSystemDocumentStorage(
                 File.Delete(path);
             }
         }
-        catch (IOException)
+        catch (IOException ex)
         {
-            // Best-effort cleanup – caller must not rely on this succeeding
+            logger.LogWarning(
+                ex,
+                "Best-effort deletion of document '{DocumentId}' (format: {Format}) failed due to an I/O error. Manual cleanup may be required.",
+                documentId,
+                format);
         }
 
         return Task.CompletedTask;

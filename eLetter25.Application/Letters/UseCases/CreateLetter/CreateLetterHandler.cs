@@ -19,6 +19,12 @@ public sealed class CreateLetterHandler(
 {
     public async Task<CreateLetterResult> Handle(CreateLetterCommand command, CancellationToken cancellationToken)
     {
+        await using var bufferedStream = command.DocumentStream.CanSeek
+            ? null
+            : await BufferStreamAsync(command.DocumentStream, cancellationToken);
+
+        var documentStream = (Stream?)bufferedStream ?? command.DocumentStream;
+
         var request = command.Request;
         var sender = MapToDomain(request.Sender);
         var recipient = MapToDomain(request.Recipient);
@@ -27,24 +33,23 @@ public sealed class CreateLetterHandler(
         var letter = Letter.Create(sender, recipient, request.SentDate, request.Subject, initialTags);
 
         var (contentHash, sizeInBytes) = await ComputeHashAndSizeAsync(
-            command.DocumentStream, command.DocumentSizeInBytes, cancellationToken);
+            documentStream, command.DocumentSizeInBytes, cancellationToken);
 
         var document = letter.CreateDocument(command.DocumentFormat);
         document.StartProcessing();
         document.SetStoredMetadata(contentHash, sizeInBytes);
 
-        await documentStorage.StoreAsync(document.Id, command.DocumentFormat, command.DocumentStream,
-            cancellationToken);
-        await letterRepository.AddAsync(letter, cancellationToken);
+        await documentStorage.StoreAsync(document.Id, command.DocumentFormat, documentStream, cancellationToken);
 
         try
         {
+            await letterRepository.AddAsync(letter, cancellationToken);
             await unitOfWork.CommitAsync(cancellationToken);
         }
-        catch (Exception dbException)
+        catch (Exception persistenceException)
         {
-            logger.LogError(dbException,
-                "DB commit failed after storing document {DocumentId}. Attempting to delete orphaned file.",
+            logger.LogError(persistenceException,
+                "Persistence failed after storing document {DocumentId}. Attempting to delete orphaned file.",
                 document.Id);
 
             await documentStorage.DeleteAsync(document.Id, command.DocumentFormat, CancellationToken.None);
@@ -52,6 +57,14 @@ public sealed class CreateLetterHandler(
         }
 
         return new CreateLetterResult(letter.Id, document.Id);
+    }
+
+    private static async Task<MemoryStream> BufferStreamAsync(Stream source, CancellationToken cancellationToken)
+    {
+        var buffer = new MemoryStream();
+        await source.CopyToAsync(buffer, cancellationToken);
+        buffer.Seek(0, SeekOrigin.Begin);
+        return buffer;
     }
 
     private static async Task<(ContentHash Hash, long SizeInBytes)> ComputeHashAndSizeAsync(
