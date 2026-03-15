@@ -7,6 +7,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 {
     public DbSet<LetterDbEntity> Letters { get; set; } = null!;
     public DbSet<LetterTagDbEntity> LetterTags { get; set; } = null!;
+    public DbSet<LetterDocumentDbEntity> LetterDocuments { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

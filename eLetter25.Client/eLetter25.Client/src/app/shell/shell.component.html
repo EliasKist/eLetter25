@@ -1,0 +1,38 @@
+﻿<div class="shell">
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <span class="sidebar__brand-icon">✉</span>
+      eLetter25
+    </div>
+
+    <nav class="sidebar__nav">
+      <a class="nav-link" routerLink="/dashboard" routerLinkActive="active">
+        <span class="nav-link__icon">⊞</span> Dashboard
+      </a>
+
+      <div class="sidebar__section">Briefe</div>
+      <a class="nav-link" routerLink="/letters/create" routerLinkActive="active">
+        <span class="nav-link__icon">＋</span> Neuer Brief
+      </a>
+      <a class="nav-link" routerLink="/letters" routerLinkActive="active">
+        <span class="nav-link__icon">☰</span> Übersicht
+      </a>
+
+      <div class="sidebar__section">System</div>
+      <a class="nav-link" routerLink="/settings" routerLinkActive="active">
+        <span class="nav-link__icon">⚙</span> Einstellungen
+      </a>
+    </nav>
+
+    <div class="sidebar__footer">
+      <button class="nav-link" (click)="logout()">
+        <span class="nav-link__icon">⏻</span> Abmelden
+      </button>
+    </div>
+  </aside>
+
+  <main class="shell__content">
+    <router-outlet />
+  </main>
+</div>
+

@@ -22,11 +22,23 @@ public class Letter : DomainEntity
     public Guid? SenderReferenceId { get; private set; }
     public Guid? RecipientReferenceId { get; private set; }
 
-    private Letter() // For EF Core
-    {
-    }
+    private readonly List<LetterDocument> _documents = [];
+    public IReadOnlyCollection<LetterDocument> Documents => _documents.AsReadOnly();
 
-    public static Letter Create(Correspondent sender, Correspondent recipient, DateTimeOffset sentDate)
+    private Letter()
+    {
+    } // For EF Core
+
+    /// <summary>
+    /// Creates a new <see cref="Letter"/> with all initial data in a single atomic step.
+    /// Only <see cref="Events.LetterCreatedEvent"/> is raised; no intermediate change events are emitted.
+    /// </summary>
+    public static Letter Create(
+        Correspondent sender,
+        Correspondent recipient,
+        DateTimeOffset sentDate,
+        string subject,
+        IEnumerable<Tag>? initialTags = null)
     {
         ArgumentNullException.ThrowIfNull(sender);
         ArgumentNullException.ThrowIfNull(recipient);
@@ -36,15 +48,61 @@ public class Letter : DomainEntity
             throw new DomainValidationException("Sent date must be a valid date.");
         }
 
+        if (string.IsNullOrWhiteSpace(subject))
+        {
+            throw new DomainValidationException("Subject cannot be null or whitespace.");
+        }
+
+        var tags = initialTags?.Distinct().ToList() ?? [];
+        var normalizedSubject = subject.Trim();
+
         var letter = new Letter
         {
             Sender = sender,
             Recipient = recipient,
             SentDate = sentDate,
             CreatedDate = DateTimeOffset.UtcNow,
+            Subject = normalizedSubject,
+            Tags = tags,
         };
-        letter.Raise(new LetterCreatedEvent(letter.Id, letter.SentDate, letter.CreatedDate));
+
+        letter.Raise(new LetterCreatedEvent(
+            letter.Id,
+            letter.SentDate,
+            letter.CreatedDate,
+            letter.Subject,
+            tags.Select(t => t.Value).ToArray()));
+
         return letter;
+    }
+
+    /// <summary>
+    /// Reconstitutes a <see cref="Letter"/> from a persisted snapshot without raising domain events.
+    /// Must only be called by the persistence mapper.
+    /// </summary>
+    public static Letter Reconstitute(
+        Guid id,
+        Correspondent sender,
+        Correspondent recipient,
+        DateTimeOffset sentDate,
+        DateTimeOffset createdDate,
+        string subject,
+        IEnumerable<Tag> tags,
+        Guid? senderReferenceId,
+        Guid? recipientReferenceId)
+    {
+        return new Letter
+        {
+            Id = id,
+            Sender = sender,
+            Recipient = recipient,
+            SentDate = sentDate,
+            CreatedDate = createdDate,
+            Subject = subject,
+            Tags = tags.ToList(),
+            SenderReferenceId = senderReferenceId,
+            RecipientReferenceId = recipientReferenceId,
+        };
     }
 
     public Letter SetSubject(string subject)
@@ -99,6 +157,7 @@ public class Letter : DomainEntity
         {
             AddTag(tag);
         }
+
         return this;
     }
 
@@ -127,5 +186,25 @@ public class Letter : DomainEntity
     public bool HasTag(string tagName)
     {
         return Tags.Any(t => t.Value == tagName);
+    }
+
+    /// <summary>
+    /// Creates a new <see cref="LetterDocument"/> associated with this letter and registers it
+    /// in the aggregate. Raises <see cref="Events.LetterDocumentStatusChangedEvent"/>.
+    /// </summary>
+    public LetterDocument CreateDocument(DocumentFormat documentFormat)
+    {
+        var document = new LetterDocument(Id, documentFormat);
+        _documents.Add(document);
+        return document;
+    }
+
+    /// <summary>
+    /// Adds a reconstituted document from the persistence layer without raising domain events.
+    /// Must only be called by the persistence mapper.
+    /// </summary>
+    internal void AddDocumentReconstituted(LetterDocument document)
+    {
+        _documents.Add(document);
     }
 }

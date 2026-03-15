@@ -1,10 +1,23 @@
-﻿using eLetter25.Application.Letters.Contracts;
+﻿using System.Text.Json;
+using eLetter25.Application.Letters.Contracts;
 using eLetter25.Application.Letters.UseCases.CreateLetter;
+using eLetter25.Domain.Letters;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace eLetter25.API.Controllers.Letters;
+
+/// <summary>Model binding target for the multipart letter-creation request.</summary>
+public sealed class CreateLetterFormInput
+{
+    /// <summary>JSON-serialised <see cref="CreateLetterRequest"/>.</summary>
+    [FromForm(Name = "metadata")]
+    public string Metadata { get; set; } = string.Empty;
+
+    [FromForm(Name = "document")]
+    public IFormFile? Document { get; set; }
+}
 
 /// <summary>
 /// Controller for creating letters.
@@ -15,24 +28,63 @@ namespace eLetter25.API.Controllers.Letters;
 [Authorize]
 public sealed class CreateLetterController(IMediator mediator) : ControllerBase
 {
-    /// <summary>
-    /// Creates a new letter.
-    /// </summary>
-    /// <param name="request">The letter creation data.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The ID of the newly created letter.</returns>
-    /// <response code="201">Letter successfully created.</response>
-    /// <response code="400">Invalid request data.</response>
+    private static readonly Dictionary<string, DocumentFormat> SupportedContentTypes =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["application/pdf"] = DocumentFormat.Pdf,
+            ["image/png"] = DocumentFormat.Png,
+            ["image/jpeg"] = DocumentFormat.Jpeg
+        };
+
+    /// <summary>Creates a new letter together with its physical document.</summary>
+    /// <response code="201">Letter and document successfully created.</response>
+    /// <response code="400">Invalid metadata or unsupported document format.</response>
     /// <response code="401">Unauthorized.</response>
     [HttpPost]
+    [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(CreateLetterResult), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [RequestSizeLimit(20 * 1024 * 1024)] // 20 MB
     public async Task<IActionResult> Create(
-        [FromBody] CreateLetterRequest request,
+        [FromForm] CreateLetterFormInput input,
         CancellationToken cancellationToken = default)
     {
-        var result = await mediator.Send(new CreateLetterCommand(request), cancellationToken);
+        if (input.Document is null)
+        {
+            return BadRequest(new { error = "A document file is required." });
+        }
+
+        if (!SupportedContentTypes.TryGetValue(input.Document.ContentType, out var format))
+        {
+            return BadRequest(new
+            {
+                error = $"Unsupported document type '{input.Document.ContentType}'. Allowed: PDF, PNG, JPEG."
+            });
+        }
+
+        CreateLetterRequest? request;
+
+        try
+        {
+            request = JsonSerializer.Deserialize<CreateLetterRequest>(
+                input.Metadata,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+        catch (JsonException)
+        {
+            return BadRequest(new { error = "Invalid metadata JSON." });
+        }
+
+        if (request is null)
+        {
+            return BadRequest(new { error = "Metadata must not be null." });
+        }
+
+        await using var stream = input.Document.OpenReadStream();
+        var command = new CreateLetterCommand(request, stream, format, input.Document.Length);
+
+        var result = await mediator.Send(command, cancellationToken);
         return Created($"/api/letters/{result.LetterId}", result);
     }
 }

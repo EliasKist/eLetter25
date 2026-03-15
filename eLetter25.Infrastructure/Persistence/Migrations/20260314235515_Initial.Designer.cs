@@ -9,11 +9,11 @@ using eLetter25.Infrastructure.Persistence;
 
 #nullable disable
 
-namespace eLetter25.Infrastructure.Migrations
+namespace eLetter25.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260222141905_Initial_Postgres")]
-    partial class Initial_Postgres
+    [Migration("20260314235515_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -120,6 +120,39 @@ namespace eLetter25.Infrastructure.Migrations
                     b.ToTable("Letters", "eletter25");
                 });
 
+            modelBuilder.Entity("eLetter25.Infrastructure.Persistence.Letters.LetterDocumentDbEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("DocumentFormat")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("LetterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long?>("SizeInBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LetterId");
+
+                    b.ToTable("LetterDocuments", "eletter25");
+                });
+
             modelBuilder.Entity("eLetter25.Infrastructure.Persistence.Letters.LetterTagDbEntity", b =>
                 {
                     b.Property<int>("Id")
@@ -143,6 +176,17 @@ namespace eLetter25.Infrastructure.Migrations
                     b.ToTable("LetterTags", "eletter25");
                 });
 
+            modelBuilder.Entity("eLetter25.Infrastructure.Persistence.Letters.LetterDocumentDbEntity", b =>
+                {
+                    b.HasOne("eLetter25.Infrastructure.Persistence.Letters.LetterDbEntity", "Letter")
+                        .WithMany("Documents")
+                        .HasForeignKey("LetterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Letter");
+                });
+
             modelBuilder.Entity("eLetter25.Infrastructure.Persistence.Letters.LetterTagDbEntity", b =>
                 {
                     b.HasOne("eLetter25.Infrastructure.Persistence.Letters.LetterDbEntity", "Letter")
@@ -156,6 +200,8 @@ namespace eLetter25.Infrastructure.Migrations
 
             modelBuilder.Entity("eLetter25.Infrastructure.Persistence.Letters.LetterDbEntity", b =>
                 {
+                    b.Navigation("Documents");
+
                     b.Navigation("Tags");
                 });
 #pragma warning restore 612, 618

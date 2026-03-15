@@ -28,22 +28,30 @@ public sealed class LetterDbToDomainMapper : ILetterDbToDomainMapper
 
         var sender = new Correspondent(entity.SenderName, senderAddress, senderEmail, senderPhone);
         var recipient = new Correspondent(entity.RecipientName, recipientAddress, recipientEmail, recipientPhone);
+        var tags = entity.Tags.Select(t => new Tag(t.Tag));
 
-        var letter = Letter.Create(sender, recipient, entity.SentDate)
-            .SetSubject(entity.Subject);
+        var letter = Letter.Reconstitute(
+            entity.Id,
+            sender,
+            recipient,
+            entity.SentDate,
+            entity.CreatedDate,
+            entity.Subject,
+            tags,
+            entity.SenderReferenceId,
+            entity.RecipientReferenceId);
 
-        if (entity.SenderReferenceId.HasValue)
+        foreach (var docEntity in entity.Documents)
         {
-            letter.SetSenderReferenceId(entity.SenderReferenceId.Value);
+            var document = LetterDocument.Reconstitute(
+                docEntity.Id,
+                docEntity.LetterId,
+                docEntity.DocumentFormat,
+                docEntity.Status,
+                docEntity.ContentHash,
+                docEntity.SizeInBytes);
+            letter.AddDocumentReconstituted(document);
         }
-
-        if (entity.RecipientReferenceId.HasValue)
-        {
-            letter.SetRecipientReferenceId(entity.RecipientReferenceId.Value);
-        }
-
-        letter.ClearTags();
-        letter.AddTags(entity.Tags.Select(t => new Tag(t.Tag)));
 
         return letter;
     }

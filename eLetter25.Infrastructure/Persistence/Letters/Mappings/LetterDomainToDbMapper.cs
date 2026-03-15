@@ -1,6 +1,4 @@
 ﻿using eLetter25.Domain.Letters;
-using eLetter25.Domain.Letters.ValueObjects;
-using eLetter25.Domain.Shared.ValueObjects;
 
 namespace eLetter25.Infrastructure.Persistence.Letters.Mappings;
 
@@ -48,11 +46,25 @@ public sealed class LetterDomainToDbMapper : ILetterDomainToDbMapper
                 LetterId = letter.Id,
                 Tag = t.Value,
             }).ToList(),
+            Documents = letter.Documents.Select(d => new LetterDocumentDbEntity
+            {
+                Id = d.Id,
+                LetterId = letter.Id,
+                DocumentFormat = d.DocumentFormat,
+                Status = d.Status,
+                ContentHash = d.ContentHash?.Value,
+                SizeInBytes = d.SizeInBytes
+            }).ToList()
         };
 
         foreach (var tagEntity in entity.Tags)
         {
             tagEntity.Letter = entity;
+        }
+
+        foreach (var documentEntity in entity.Documents)
+        {
+            documentEntity.Letter = entity;
         }
 
         return entity;

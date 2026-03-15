@@ -22,5 +22,6 @@ export interface CreateLetterRequest {
 
 export interface CreateLetterResult {
   letterId: string;
+  documentId: string;
 }
 

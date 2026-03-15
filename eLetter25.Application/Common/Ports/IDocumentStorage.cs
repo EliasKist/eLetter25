@@ -1,16 +1,18 @@
-﻿namespace eLetter25.Application.Common.Ports;
+﻿using eLetter25.Domain.Letters;
+
+namespace eLetter25.Application.Common.Ports;
 
 /// <summary>
 /// Abstraction for document storage operations to allow different storage providers.
 /// </summary>
 public interface IDocumentStorage
 {
-    /// <summary>
-    /// Stores a PDF document with the technical name <c>{documentId}.pdf</c>.
-    /// </summary>
-    /// <param name="documentId">The stable identifier used for the stored file name.</param>
-    /// <param name="pdfContent">The PDF content stream. The implementation must not dispose it.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    Task StorePdfAsync(Guid documentId, Stream pdfContent, CancellationToken cancellationToken = default);
-}
+    /// <summary>Stores a document under a stable content-addressed identifier.</summary>
+    Task StoreAsync(Guid documentId, DocumentFormat format, Stream content, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Deletes a previously stored document. No-op if the file does not exist,
+    /// so it is safe to use as a compensating action after a failed DB commit.
+    /// </summary>
+    Task DeleteAsync(Guid documentId, DocumentFormat format, CancellationToken cancellationToken = default);
+}
